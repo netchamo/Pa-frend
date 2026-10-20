@@ -311,6 +311,14 @@ canvas{display:block}
       <div class="field" id="devField"><span class="lbl">התקן קלט</span>
         <select id="devSel"><option value="">ברירת מחדל של המערכת</option></select>
       </div>
+      <div class="field"><span class="lbl">כשיוצאים מהאפליקציה</span>
+        <div class="seg" id="bgSeg">
+          <button data-b="stop" aria-pressed="true">כבה מיקרופון</button>
+          <button data-b="keep" aria-pressed="false">השאר דולק ברקע</button>
+        </div>
+        <label class="tog" id="resumeRow"><input type="checkbox" id="autoResume" checked>חזור למדידה אוטומטית כשחוזרים</label>
+        <span class="note" id="bgNote"></span>
+      </div>
       <div class="field" id="fileField" hidden><span class="lbl">קובץ אודיו (הקלטה מהאולם, רעש ורוד, מוזיקה)</span>
         <input type="file" id="fileIn" accept="audio/*">
         <label class="tog"><input type="checkbox" id="monitor">השמע ברמקולים בזמן הניתוח</label>
@@ -1179,7 +1187,7 @@ $("#avg").onchange=e=>{S.avgMode=e.target.value};
 $("#fftSel").onchange=e=>{S.fft=+e.target.value;if(S.ctx){const was=S.running;S.an=null;ensureCtx();if(was)startSource()}else{alloc();seedStatic()}};
 $("#freezeBtn").onclick=e=>{S.frozen=!S.frozen;e.target.textContent=S.frozen?"שחרר":"הקפא";e.target.style.borderColor=S.frozen?"var(--spec)":""};
 $("#resetAvg").onclick=()=>{resetMeters();toast("המיצוע אופס")};
-$("#startBtn").onclick=async()=>{if(S.running){stopSource();return}await startSource()};
+$("#startBtn").onclick=async()=>{S.pausedBg=null;if(S.running){stopSource();return}await startSource()};
 $$("#srcSeg button").forEach(b=>b.onclick=async()=>{S.source=b.dataset.s;segSel("#srcSeg","s",S.source);setSourceUI();if(S.source==="mic"&&S.profile==="demo"){S.profile="iphone";$("#profSel").value="iphone";onProfile()}if(S.running||S.source!=="file")await startSource()});
 function setSourceUI(){$("#devField").hidden=S.source!=="mic";$("#fileField").hidden=S.source!=="file"}
 $("#devSel").onchange=()=>{if(S.source==="mic"&&S.running)startSource()};
@@ -1249,6 +1257,28 @@ function showBanner(h){const b=$("#banner");b.innerHTML=h;b.hidden=false}
 function hideBanner(){$("#banner").hidden=true}
 let toastEl=null,toastT=0;
 function toast(t){if(!toastEl){toastEl=document.createElement("div");toastEl.style.cssText="position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#18202d;border:1px solid #32405a;color:#e7ecf3;padding:8px 14px;border-radius:8px;font-size:13px;z-index:20;transition:opacity .2s;pointer-events:none";document.body.appendChild(toastEl)}toastEl.textContent=t;toastEl.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.style.opacity=0,1800)}
+
+/* ---------- background behaviour ---------- */
+S.bg=LS.get("bg","stop");S.autoResume=LS.get("autoResume",true);
+const BG_NOTE={stop:"המיקרופון נסגר ברגע שעוברים לאפליקציה אחרת או נועלים את המסך, וסימן המיקרופון של המערכת נעלם.",
+ keep:"המדידה ממשיכה ברקע (Leq, Max, היסטוריה). באנדרואיד זה עובד בדרך כלל; באייפון המערכת עוצרת דפי ווב ברקע, ולכן ייתכנו הפסקות."};
+function syncBg(){segSel("#bgSeg","b",S.bg);$("#bgNote").textContent=BG_NOTE[S.bg];$("#resumeRow").hidden=S.bg!=="stop";$("#autoResume").checked=S.autoResume}
+$$("#bgSeg button").forEach(b=>b.onclick=()=>{S.bg=b.dataset.b;LS.set("bg",S.bg);syncBg()});
+$("#autoResume").onchange=e=>{S.autoResume=e.target.checked;LS.set("autoResume",S.autoResume)};
+syncBg();
+function onHide(){
+ if(S.bg!=="stop")return;
+ if(S.running){S.pausedBg=S.source;stopSource();if(S.pink)stopNoise()}
+ try{S.ctx&&S.ctx.state==="running"&&S.ctx.suspend()}catch(e){}
+}
+async function onShow(){
+ if(!S.pausedBg)return;const src=S.pausedBg;S.pausedBg=null;
+ if(S.autoResume){try{S.ctx&&await S.ctx.resume()}catch(e){}S.source=src;await startSource();if(S.running)toast("המדידה חודשה")}
+ else showBanner("המדידה נעצרה כשיצאת מהאפליקציה. לחץ “הפעל מדידה” כדי להמשיך.");
+}
+document.addEventListener("visibilitychange",()=>document.hidden?onHide():onShow());
+window.addEventListener("pagehide",onHide);
+window.addEventListener("pageshow",e=>{if(e.persisted)onShow()});
 
 /* ---------- boot ---------- */
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener("devicechange",listDevices);
