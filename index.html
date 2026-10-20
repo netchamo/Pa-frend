@@ -244,8 +244,8 @@ canvas{display:block}
         <option value="1">החלקה 1/1</option>
       </select>
       <select class="sel" id="avg" aria-label="מיצוע">
-        <option value="fast">מיצוע מהיר</option>
-        <option value="slow" selected>מיצוע איטי</option>
+        <option value="fast" selected>מיצוע מהיר</option>
+        <option value="slow">מיצוע איטי</option>
         <option value="inf">מיצוע מצטבר</option>
       </select>
       <select class="sel" id="fftSel" aria-label="רזולוציה">
@@ -303,9 +303,9 @@ canvas{display:block}
       <h2>מקור ומיקרופון <small id="profQ">—</small></h2>
       <div class="field"><span class="lbl">מקור אות</span>
         <div class="seg" id="srcSeg">
-          <button data-s="mic" aria-pressed="false">מיקרופון</button>
+          <button data-s="mic" aria-pressed="true">מיקרופון</button>
           <button data-s="file" aria-pressed="false">קובץ</button>
-          <button data-s="demo" aria-pressed="true">הדגמה</button>
+          <button data-s="demo" aria-pressed="false">הדגמה</button>
         </div>
       </div>
       <div class="field" id="devField"><span class="lbl">התקן קלט</span>
@@ -494,10 +494,10 @@ const hasGain=t=>t==="bell"||t==="lowshelf"||t==="highshelf";
 /* ---------- state ---------- */
 const S={
  ctx:null,an:null,srcNode:null,stream:null,track:null,fileBuf:null,demoNodes:null,pink:null,pinkBuf:null,
- running:false,source:"demo",frozen:false,
+ running:false,source:"mic",frozen:false,isStatic:true,
  fft:16384,fs:48000,
- profile:LS.get("profile","iphone"),offsets:LS.get("offsets",{}),custom:LS.get("custom",null),calMeta:LS.get("calMeta",{}),
- w:"A",tw:"F",avgMode:"slow",smooth:1/6,view:"spectrum",
+ profile:LS.get("profile",/android/i.test(navigator.userAgent)?"android":/ipad|macintosh/i.test(navigator.userAgent)&&"ontouchend" in document?"ipad":"iphone"),offsets:LS.get("offsets",{}),custom:LS.get("custom",null),calMeta:LS.get("calMeta",{}),
+ w:"A",tw:"F",avgMode:"fast",smooth:1/6,view:"spectrum",
  tgt:LS.get("target",{curve:"house",tilt:0,spl:95}),
  bands:LS.get("bands",[]),sel:-1,
  positions:[],snaps:[],sugg:[],masterGain:null,builds:[],
@@ -609,7 +609,7 @@ function stopSource(){
 }
 function resetMeters(){pFast.fill(0);pSlow.fill(0);pInf.fill(0);infN=0;S.levelF=S.levelS=0;S.leqE=0;S.leqT=0;S.lmax=-1e9;S.peak=-1e9;peakH.fill(-200)}
 async function startSource(){
- ensureCtx();stopSource();resetMeters();hideBanner();
+ ensureCtx();stopSource();resetMeters();hideBanner();S.isStatic=false;S.micErr=false;S.hist=[];S.builds=[];S.sugg=[];S.skipped=[];renderSugg();
  const ctx=S.ctx;
  if(S.source==="demo"){
   const src=ctx.createBufferSource();src.buffer=makePinkBuffer();src.loop=true;
@@ -626,12 +626,14 @@ async function startSource(){
    S.stream=await navigator.mediaDevices.getUserMedia({audio:c,video:false});
   }catch(e){
    showBanner(e&&e.name==="NotAllowedError"?"הגישה למיקרופון נחסמה. אשר גישה למיקרופון בהגדרות האתר בדפדפן (סמל המנעול ליד הכתובת) ורענן את הדף. בינתיים אפשר לעבוד עם הדגמה או קובץ.":"לא הצלחתי לפתוח את המיקרופון ("+(e&&e.name||"שגיאה")+"). בדוק שההתקן מחובר ושאין אפליקציה אחרת שתופסת אותו.");
-   S.source="demo";segSel("#srcSeg","s","demo");setSourceUI();setStatus();return;
+   S.micErr=true;setStatus();return;
   }
   S.track=S.stream.getAudioTracks()[0];
   const st=S.track.getSettings?S.track.getSettings():{};
   S.procOK=!(st.autoGainControl||st.noiseSuppression||st.echoCancellation);
-  S.srcNode=ctx.createMediaStreamSource(S.stream);S.srcNode.connect(S.an);S.running=true;
+  if(S.profile==="demo"){S.profile=/android/i.test(navigator.userAgent)?"android":"iphone";$("#profSel").value=S.profile;onProfile()}
+  S.micErr=false;S.srcNode=ctx.createMediaStreamSource(S.stream);S.srcNode.connect(S.an);S.running=true;
+  S.track.onended=()=>{showBanner("המיקרופון נותק (התקן נותק או שמערכת ההפעלה לקחה אותו). לחץ הפעל מדידה שוב.");stopSource()};
   await listDevices();autoProfile(S.track.label||"");
  } else if(S.source==="file"){
   if(!S.fileBuf){showBanner("בחר קובץ אודיו בחלונית “מקור ומיקרופון”.");return}
@@ -674,7 +676,7 @@ function tick(now){
    pFast[k]+=aF*(p-pFast[k]);pSlow[k]+=aS*(p-pSlow[k]);pInf[k]+=(p-pInf[k])/infN;tot+=p*wBin[k]}
   S.levelF+=aF*(tot-S.levelF);S.levelS+=aS*(tot-S.levelS);S.leqE+=tot*dt;S.leqT+=dt;
   let pk=0;for(let i=tbuf.length-4096;i<tbuf.length;i++){const a=Math.abs(tbuf[i]);if(a>pk)pk=a}
-  const pkDb=20*Math.log10(pk+1e-12)+off;S.peak=Math.max(pkDb,S.peak-dt*8);S.pkFS=20*Math.log10(pk+1e-12);
+  const pkDb=20*Math.log10(pk+1e-12)+off;S.peak=Math.max(pkDb,S.peak-dt*8);S.pkFS=20*Math.log10(pk+1e-12);S.pkWin=Math.max(S.pkWin==null?-300:S.pkWin,S.pkFS);
   const L=db10(S.tw==="S"?S.levelS:S.levelF)+K_FS+off;if(S.leqT>1)S.lmax=Math.max(S.lmax,L);
   if(now-S.lastHist>100){S.lastHist=now;S.hist.push(db10(S.levelF)+K_FS+off);if(S.hist.length>600)S.hist.shift()}
  }
@@ -809,6 +811,9 @@ function renderReliability(){
 
 /* ---------- meter UI ---------- */
 function updateMeterUI(){
+ const pkw=S.pkWin;S.pkWin=null;if(pkw!=null)S.pkShow=pkw;
+ if(S.running&&S.source==="mic"&&pkw!=null){const lv=pkw;$("#srcLabel").textContent="מיקרופון · "+(lv<-120?"אין אות":lv.toFixed(0)+" dBFS");
+  if(lv<-90){S.silentT=(S.silentT||0)+1;if(S.silentT===8)showBanner("המיקרופון פתוח אבל לא מגיע ממנו אות. בדוק שנבחר ההתקן הנכון, שלא מושתק, ושאין אפליקציה אחרת שמשתמשת בו.")}else S.silentT=0}
  const off=offset()+K_FS;
  const L=S.tw==="L"?(S.leqT>0?db10(S.leqE/S.leqT)+off:NaN):db10(S.tw==="S"?S.levelS:S.levelF)+off;
  const ok=isFinite(L)&&L>0;
@@ -822,8 +827,8 @@ function updateMeterUI(){
  $("#deltaV").style.color=!isFinite(d)?"":Math.abs(d)<1.5?"var(--good)":Math.abs(d)<4?"var(--warn)":"var(--bad)";
  $("#deltaTxt").textContent=!isFinite(d)?"הפרש מהיעד":Math.abs(d)<1.5?"בטווח היעד":d>0?"מעל היעד":"מתחת ליעד";
  $("#gaugeI").style.left=(50+clamp(isFinite(d)?d:0,-12,12)/12*50)+"%";
- $("#clipTxt").textContent=S.pkFS!=null?"Headroom "+(-S.pkFS).toFixed(1)+" dB":"Headroom --";
- $("#clipTxt").style.color=S.pkFS>-1?"var(--bad)":S.pkFS>-6?"var(--warn)":"";
+ $("#clipTxt").textContent=S.pkShow!=null&&S.pkShow>-120?"Headroom "+(-S.pkShow).toFixed(1)+" dB":"Headroom --";
+ $("#clipTxt").style.color=S.pkShow>-1?"var(--bad)":S.pkShow>-6?"var(--warn)":"";
 }
 
 /* ---------- drawing ---------- */
@@ -873,11 +878,13 @@ function autoRange(dt){
 function draw(dt){
  if(!W)return;
  autoRange(dt);
+ if(S.micErr&&S.view!=="scope"){drawFrame();drawDbAxis();drawWatermark();drawHist();return}
  if(S.imm&&S.view==="spectrum")drawImmersive(dt);
  else if(S.view==="spectrum")drawSpectrum();
  else if(S.view==="bars")drawBars();
  else if(S.view==="sgram")drawSgram();
  else drawScope();
+ if(S.view!=="scope")drawWatermark();
  drawHist();
 }
 function drawSpectrum(){
@@ -1083,6 +1090,20 @@ document.addEventListener("keydown",e=>{if(e.key==="Escape")exitImm();if((e.key=
 const onFs=()=>{if(S.imm&&!document.fullscreenElement&&!document.webkitFullscreenElement&&IM.fsWas)exitImm();IM.fsWas=!!(document.fullscreenElement||document.webkitFullscreenElement)};
 document.addEventListener("fullscreenchange",onFs);document.addEventListener("webkitfullscreenchange",onFs);
 
+function drawWatermark(){
+ let t=null,sub=null,col="rgba(245,192,74,.95)";
+ if(S.micErr){t="אין גישה למיקרופון";sub="הגרף לא מציג מדידה. ראה את ההודעה למעלה";col="rgba(255,107,107,.95)"}
+ else if(S.isStatic&&!S.running){t="תצוגת דוגמה — לא מדידה אמיתית";sub="לחץ “הפעל מדידה” כדי למדוד עם המיקרופון"}
+ else if(S.running&&S.source==="demo"){t="הדגמה — אות מדומה, לא המיקרופון";sub="לבחירת מיקרופון: מקור ומיקרופון ← מיקרופון"}
+ if(!t)return;
+ const mono=getComputedStyle(document.documentElement).getPropertyValue("--ui");
+ cx.save();cx.direction="rtl";cx.textAlign="center";cx.textBaseline="middle";
+ const x=PAD.l+pw()/2,y=PAD.t+(S.imm?ph()*.55:34);
+ cx.font="600 14px "+mono;const w=Math.max(cx.measureText(t).width,(cx.font="12px "+mono,cx.measureText(sub).width))+28;
+ cx.fillStyle="rgba(11,15,21,.82)";cx.strokeStyle=col;cx.lineWidth=1;cx.beginPath();cx.roundRect?cx.roundRect(x-w/2,y-22,w,44,10):cx.rect(x-w/2,y-22,w,44);cx.fill();cx.stroke();
+ cx.fillStyle=col;cx.font="600 14px "+mono;cx.fillText(t,x,y-8);cx.fillStyle="rgba(231,236,243,.75)";cx.font="12px "+mono;cx.fillText(sub,x,y+11);cx.restore();
+}
+
 /* ---------- hover / interaction ---------- */
 let hov=null,drag=-1,lastTap=0;
 function drawHover(){
@@ -1166,7 +1187,7 @@ $("#fileIn").onchange=async e=>{const f=e.target.files[0];if(!f)return;ensureCtx
 $("#monitor").onchange=()=>{if(S.source==="file"&&S.running)startSource()};
 function setStatus(){
  $("#srcDot").classList.toggle("on",S.running);
- $("#srcLabel").textContent=S.running?({mic:"מיקרופון פעיל",file:"מנתח קובץ",demo:"הדגמה חיה"})[S.source]:"הדגמה סטטית · מושהה";
+ $("#srcLabel").textContent=S.running?({mic:"מיקרופון פעיל",file:"מנתח קובץ",demo:"הדגמה · אות מדומה"})[S.source]:S.micErr?"המיקרופון לא זמין":S.isStatic?"תצוגת דוגמה":"מושהה";
  $("#startBtn").textContent=S.running?"עצור":"הפעל מדידה";$("#startBtn").className=S.running?"btn":"btn primary";
 }
 // profiles
@@ -1231,9 +1252,9 @@ function toast(t){if(!toastEl){toastEl=document.createElement("div");toastEl.sty
 
 /* ---------- boot ---------- */
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener("devicechange",listDevices);
-S.profile="demo";$("#profSel").value="demo";
+if(S.profile==="demo")S.profile=/android/i.test(navigator.userAgent)?"android":"iphone";$("#profSel").value=S.profile;
 alloc();onProfile();syncTgt();seedStatic();
-if(!S.bands.length){analyze();suggestEQ();S.bands=S.sugg.map(b=>({...b}));}
+
 setSourceUI();setStatus();resize();analyze();updateMeterUI();
 requestAnimationFrame(t=>{lastT=t;requestAnimationFrame(tick)});
 })();
