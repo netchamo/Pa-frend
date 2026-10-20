@@ -1,0 +1,1246 @@
+<!doctype html>
+<html lang="he">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b0f15">
+<meta name="description" content="Resona — מנתח RTA ומד SPL לכיוון מערכות הגברה בחלל">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Resona">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/icon-180.png">
+<style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
+<title>Resona Room Analyzer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap">
+<style>
+/* Layout: instrument console — readout strip on top, analyzer stage as the hero, control drawers in a grid below */
+:root{
+  --bg:#0b0f15; --panel:#121823; --panel2:#18202d; --line:#243043; --line2:#32405a;
+  --fg:#e7ecf3; --muted:#8a96aa; --faint:#5b6679;
+  --spec:#62c9ff; --spec2:#2b7fd1; --eq:#ffb454; --pred:#7be0a2; --target:#cfd8e6; --spatial:#b59bff;
+  --good:#5bd38b; --warn:#f5c04a; --bad:#ff6b6b;
+  --ui:"IBM Plex Sans Hebrew",system-ui,-apple-system,"Segoe UI",Arial,sans-serif;
+  --mono:"IBM Plex Mono",ui-monospace,"SF Mono",Menlo,Consolas,monospace;
+  --r:10px;
+  color-scheme:dark;
+}
+*{box-sizing:border-box}
+html,body{background:var(--bg);color:var(--fg)}
+body{font-family:var(--ui);font-size:14px;line-height:1.45;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
+button,select,input{font:inherit;color:inherit}
+button{cursor:pointer}
+:focus-visible{outline:2px solid var(--spec);outline-offset:2px}
+.mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px;margin-inline-end:auto}
+.brand svg{flex:none}
+.brand b{font-size:18px;letter-spacing:.02em;font-weight:700}
+.brand span{color:var(--muted);font-size:12px}
+.pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:99px;font-size:12px;color:var(--muted);background:var(--panel)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
+.dot.on{background:var(--good);box-shadow:0 0 8px var(--good)}
+.btn{border:1px solid var(--line2);background:var(--panel2);border-radius:8px;padding:7px 12px;font-size:13px}
+.btn:hover{border-color:var(--spec2)}
+.btn.primary{background:linear-gradient(180deg,#2d8de0,#1f6cb8);border-color:#3a9aec;color:#fff;font-weight:600}
+.btn.warm{background:linear-gradient(180deg,#e8962e,#c27418);border-color:#f0a548;color:#1a1004;font-weight:600}
+.btn.small{padding:4px 9px;font-size:12px}
+.btn:disabled{opacity:.45;cursor:default}
+
+.banner{border:1px solid #5a4520;background:#221b10;color:#f3d9a8;border-radius:var(--r);padding:10px 12px;font-size:13px}
+.banner[hidden]{display:none}
+
+/* meter strip */
+.meter{display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,1fr) minmax(0,1.3fr);gap:12px}
+.card{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:12px 14px;min-width:0}
+.spl{display:flex;align-items:flex-end;gap:10px}
+.spl .big{font-family:var(--mono);font-size:56px;line-height:.95;font-weight:500;letter-spacing:-.02em;font-variant-numeric:tabular-nums}
+.spl .unit{font-family:var(--mono);color:var(--muted);font-size:15px;padding-bottom:6px}
+.chips{display:flex;gap:4px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);background:transparent;border-radius:6px;padding:3px 8px;font-size:12px;color:var(--muted);font-family:var(--mono)}
+.chip[aria-pressed="true"]{background:var(--panel2);color:var(--fg);border-color:var(--spec2)}
+.lbl{font-size:11px;color:var(--muted);letter-spacing:.04em}
+.stats{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:10px}
+.stat .v{font-family:var(--mono);font-size:17px;font-variant-numeric:tabular-nums}
+.target-row{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.target-row input[type=range]{flex:1;min-width:120px}
+.delta{font-family:var(--mono);font-size:26px;font-variant-numeric:tabular-nums}
+.gauge{position:relative;height:10px;border-radius:5px;background:linear-gradient(90deg,#1c3b5a 0%,#1d4d3a 40%,#1d4d3a 60%,#5a2a26 100%);margin-top:8px}
+.gauge i{position:absolute;top:-4px;width:3px;height:18px;background:var(--fg);border-radius:2px;transform:translateX(-50%);transition:left .15s}
+.gauge b{position:absolute;top:-3px;left:50%;width:1px;height:16px;background:var(--muted)}
+canvas{display:block}
+#hist{width:100%;height:74px}
+
+/* stage */
+.stage{background:var(--panel);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.stagebar{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:8px 10px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.tabs{display:flex;gap:2px;background:var(--bg);padding:3px;border-radius:8px}
+.tab{border:0;background:transparent;padding:5px 11px;border-radius:6px;font-size:13px;color:var(--muted)}
+.tab[aria-selected="true"]{background:var(--panel2);color:var(--fg);box-shadow:inset 0 0 0 1px var(--line2)}
+.sel{background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:4px 6px;font-size:12px}
+.tog{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted);padding:3px 6px;border-radius:6px;border:1px solid transparent}
+.tog input{accent-color:var(--spec)}
+.spacer{flex:1}
+.canvaswrap{position:relative;direction:ltr;height:min(58vh,560px);min-height:300px;touch-action:pan-y}
+#plot{width:100%;height:100%}
+.readout{position:absolute;top:8px;left:50px;font-family:var(--mono);font-size:12px;color:var(--fg);background:rgba(11,15,21,.78);border:1px solid var(--line);padding:4px 8px;border-radius:6px;pointer-events:none}
+.readout[hidden]{display:none}
+.hint{position:absolute;bottom:28px;right:48px;font-size:11px;color:var(--faint);pointer-events:none;direction:rtl}
+.nodebar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;padding:8px 10px;border-top:1px solid var(--line);background:var(--panel2);direction:rtl}
+.nodebar[hidden]{display:none}
+.nodebar label{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--muted)}
+.nodebar input[type=number]{width:78px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px;font-family:var(--mono)}
+.nodebar input[type=range]{width:120px}
+.swatch{width:12px;height:12px;border-radius:50%}
+
+/* panels */
+.grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+.panel h2{font-size:13px;font-weight:600;margin:0 0 10px;display:flex;align-items:center;gap:8px;letter-spacing:.02em}
+.panel h2 small{font-weight:400;color:var(--muted);font-size:11px;margin-inline-start:auto}
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:10px}
+.field select,.field input[type=number],.field input[type=text]{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font-size:13px;width:100%}
+.seg{display:flex;gap:4px}
+.seg button{flex:1;border:1px solid var(--line);background:var(--bg);border-radius:7px;padding:7px 4px;font-size:12px;color:var(--muted)}
+.seg button[aria-pressed="true"]{border-color:var(--spec2);color:var(--fg);background:var(--panel2)}
+.note{font-size:12px;color:var(--muted)}
+.checks{list-style:none;margin:8px 0 0;padding:0;display:flex;flex-direction:column;gap:6px}
+.checks li{display:flex;gap:8px;align-items:flex-start;font-size:12.5px}
+.checks .st{flex:none;width:18px;height:18px;border-radius:50%;display:grid;place-items:center;font-size:11px;font-weight:700;color:#0b0f15;margin-top:1px}
+.st.ok{background:var(--good)} .st.warn{background:var(--warn)} .st.bad{background:var(--bad)}
+.score{display:flex;align-items:center;gap:10px;margin:4px 0 2px}
+.score .bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
+.score .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--bad),var(--warn),var(--good));transition:width .3s}
+.calbox{border:1px dashed var(--line2);border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.row > input[type=number]{width:90px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-family:var(--mono)}
+
+.list{display:flex;flex-direction:column;gap:6px}
+.item{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:10px;align-items:center;padding:7px 8px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.item .t{font-family:var(--mono);font-size:12.5px;font-variant-numeric:tabular-nums}
+.item .s{font-size:11px;color:var(--muted)}
+.badge{font-family:var(--mono);font-size:11px;padding:2px 6px;border-radius:5px;border:1px solid var(--line2)}
+.empty{font-size:12px;color:var(--faint);padding:8px 2px}
+.master{display:flex;align-items:baseline;gap:8px;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--line);margin-bottom:8px}
+.master .delta{font-size:20px}
+
+.loads{display:flex;flex-direction:column;gap:7px}
+.load{display:grid;grid-template-columns:minmax(0,118px) minmax(0,1fr) 34px 50px;gap:8px;align-items:center;font-size:12px}
+.load .track{position:relative;height:14px;background:var(--bg);border-radius:4px;border:1px solid var(--line)}
+.load .track b{position:absolute;left:50%;top:0;bottom:0;width:1px;background:var(--line2)}
+.load .track i{position:absolute;top:2px;bottom:2px;border-radius:3px}
+.load .pc{font-family:var(--mono);color:var(--muted);text-align:left;direction:ltr;font-size:11px}
+.load .nm{display:flex;flex-direction:column;line-height:1.25}
+.load .v{font-family:var(--mono);text-align:left;direction:ltr}
+.foot{font-size:11px;color:var(--faint);text-align:center;margin-top:6px}
+
+/* immersive listening view */
+.stage.imm{position:fixed;inset:0;z-index:30;border:0;border-radius:0;background:#05070b}
+.stage.imm .stagebar,.stage.imm .nodebar{display:none}
+.stage.imm .canvaswrap{height:100%;min-height:0;touch-action:none}
+.stage.imm.rot .canvaswrap{position:fixed;top:0;left:0;transform-origin:0 0}
+.hud-exit{position:absolute;top:calc(12px + env(safe-area-inset-top,0px));right:calc(12px + env(safe-area-inset-right,0px));pointer-events:auto;display:flex;align-items:center;gap:6px;border:1px solid rgba(255,255,255,.22);background:rgba(18,24,35,.85);color:#fff;border-radius:99px;padding:8px 14px;font-size:14px;font-weight:600;z-index:2}
+.stage.imm.rot .hud-exit,.stage.imm.rot .hud-spl{top:12px}
+.stage.imm .hint{display:none}
+.hud{position:absolute;inset:0;pointer-events:none;display:none;font-family:var(--ui)}
+.stage.imm .hud{display:block}
+.hud-spl{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));left:calc(18px + env(safe-area-inset-left,0px));display:flex;flex-direction:column;gap:2px}
+.hud-spl .n{font-family:var(--mono);font-size:clamp(40px,7vw,84px);line-height:.9;font-weight:500;letter-spacing:-.03em;color:#f2f5f9;text-shadow:0 0 24px rgba(98,201,255,.35);font-variant-numeric:tabular-nums}
+.hud-spl .u{font-family:var(--mono);font-size:13px;color:#8a96aa}
+.hud-spl .d{font-family:var(--mono);font-size:15px;font-variant-numeric:tabular-nums}
+.hud-ctl{position:absolute;top:calc(14px + env(safe-area-inset-top,0px));right:calc(96px + env(safe-area-inset-right,0px));display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end;max-width:70%;pointer-events:auto;direction:rtl;transition:opacity .4s}
+.hud-ctl button{border:1px solid rgba(255,255,255,.14);background:rgba(18,24,35,.72);backdrop-filter:blur(6px);-webkit-backdrop-filter:blur(6px);color:#cfd8e6;border-radius:99px;padding:6px 12px;font-size:12.5px}
+.hud-ctl button[aria-pressed="true"]{border-color:#62c9ff;color:#fff;background:rgba(43,127,209,.35)}
+.hud-ctl .x{font-size:15px;padding:5px 11px}
+.hud-band{position:absolute;bottom:calc(10px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);display:flex;gap:14px;font-family:var(--mono);font-size:11px;color:#8a96aa;transition:opacity .4s;direction:ltr;white-space:nowrap}
+.hud-band b{font-weight:500}
+.stage.imm.idle .hud-ctl,.stage.imm.idle .hud-band{opacity:0}
+.stage.imm.idle .canvaswrap{cursor:none}
+@media (max-width:980px){.meter{grid-template-columns:minmax(0,1fr) minmax(0,1fr)} .meter .histcard{grid-column:1/-1} .grid{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.stage.imm .hud-ctl{}
+@media (max-width:640px){.hud-ctl{top:auto;bottom:calc(40px + env(safe-area-inset-bottom,0px));left:12px;right:12px;max-width:none;justify-content:center} .meter,.grid{grid-template-columns:minmax(0,1fr)} .spl .big{font-size:46px} .canvaswrap{height:52vh} .hint{display:none}}
+.stage.imm.rot .hud-ctl{top:12px;bottom:auto;left:auto;right:96px;max-width:72%;justify-content:flex-end}
+.stage.imm.rot .hud-spl .n{font-size:44px}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+
+</head>
+<body>
+<div class="wrap" dir="rtl">
+  <header class="top">
+    <div class="brand">
+      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#18202d"/><path d="M4 19 C8 19 9 8 12 8 S15 22 18 22 S21 12 23 12 S25 16 26 16" fill="none" stroke="#62c9ff" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="22" r="2.4" fill="#ffb454"/></svg>
+      <div><b>Resona</b><br><span>מנתח חלל ומערכת הגברה</span></div>
+    </div>
+    <span class="pill"><span class="dot" id="srcDot"></span><span id="srcLabel">הדגמה סטטית</span></span>
+    <span class="pill mono" id="srInfo">— kHz</span>
+    <button class="btn primary" id="startBtn">הפעל מדידה</button>
+  </header>
+
+  <div class="banner" id="banner" hidden></div>
+
+  <section class="meter">
+    <div class="card">
+      <div class="row" style="justify-content:space-between">
+        <span class="lbl">רמת לחץ קול</span>
+        <div class="chips" id="wChips">
+          <button class="chip" data-w="A" aria-pressed="true">A</button>
+          <button class="chip" data-w="C" aria-pressed="false">C</button>
+          <button class="chip" data-w="Z" aria-pressed="false">Z</button>
+          <span style="width:6px"></span>
+          <button class="chip" data-t="F" aria-pressed="true">Fast</button>
+          <button class="chip" data-t="S" aria-pressed="false">Slow</button>
+          <button class="chip" data-t="L" aria-pressed="false">Leq</button>
+        </div>
+      </div>
+      <div class="spl" style="margin-top:8px" dir="ltr">
+        <span class="big" id="splBig">--.-</span><span class="unit" id="splUnit">dB(A) F</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="lbl">Leq</div><div class="v" id="stLeq">--.-</div></div>
+        <div class="stat"><div class="lbl">Max</div><div class="v" id="stMax">--.-</div></div>
+        <div class="stat"><div class="lbl">Peak (Z)</div><div class="v" id="stPeak">--.-</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <span class="lbl">עוצמת יעד</span>
+      <div class="target-row" style="margin-top:6px">
+        <input type="range" id="tgtSpl" min="60" max="115" step="1" value="95" aria-label="עוצמת יעד">
+        <span class="mono" style="font-size:18px" id="tgtSplV">95 dB(A)</span>
+      </div>
+      <div class="row" style="margin-top:8px;justify-content:space-between">
+        <span class="note" id="deltaTxt">הפרש מהיעד</span>
+        <span class="delta" id="deltaV" dir="ltr">--</span>
+      </div>
+      <div class="gauge" dir="ltr"><b></b><i id="gaugeI" style="left:50%"></i></div>
+      <div class="row note" style="justify-content:space-between;margin-top:4px" dir="ltr"><span>−12</span><span>0</span><span>+12</span></div>
+    </div>
+    <div class="card histcard">
+      <div class="row" style="justify-content:space-between"><span class="lbl">היסטוריית רמה · 60 שניות</span><span class="note mono" id="clipTxt">Headroom --</span></div>
+      <canvas id="hist" style="margin-top:6px"></canvas>
+    </div>
+  </section>
+
+  <section class="stage">
+    <div class="stagebar">
+      <div class="tabs" role="tablist" id="views">
+        <button class="tab" role="tab" data-v="spectrum" aria-selected="true">ספקטרום</button>
+        <button class="tab" role="tab" data-v="bars" aria-selected="false">1/3 אוקטבה</button>
+        <button class="tab" role="tab" data-v="sgram" aria-selected="false">ספקטרוגרמה</button>
+        <button class="tab" role="tab" data-v="scope" aria-selected="false">צורת גל</button>
+      </div>
+      <select class="sel" id="smooth" aria-label="החלקה">
+        <option value="0.0208">החלקה 1/48</option>
+        <option value="0.0417">החלקה 1/24</option>
+        <option value="0.0833">החלקה 1/12</option>
+        <option value="0.1667" selected>החלקה 1/6</option>
+        <option value="0.3333">החלקה 1/3</option>
+        <option value="1">החלקה 1/1</option>
+      </select>
+      <select class="sel" id="avg" aria-label="מיצוע">
+        <option value="fast">מיצוע מהיר</option>
+        <option value="slow" selected>מיצוע איטי</option>
+        <option value="inf">מיצוע מצטבר</option>
+      </select>
+      <select class="sel" id="fftSel" aria-label="רזולוציה">
+        <option value="8192">FFT 8k</option>
+        <option value="16384" selected>FFT 16k</option>
+        <option value="32768">FFT 32k</option>
+      </select>
+      <span class="spacer"></span>
+      <label class="tog"><input type="checkbox" id="tLive" checked>חי</label>
+      <label class="tog"><input type="checkbox" id="tPeak" checked>שיא</label>
+      <label class="tog"><input type="checkbox" id="tTarget" checked>יעד</label>
+      <label class="tog"><input type="checkbox" id="tEq" checked>EQ</label>
+      <label class="tog"><input type="checkbox" id="tPred" checked>צפוי</label>
+      <label class="tog"><input type="checkbox" id="tBuild" checked>הצטברויות</label>
+      <button class="btn small primary" id="immBtn">⛶ מסך מלא</button>
+      <button class="btn small" id="freezeBtn">הקפא</button>
+      <button class="btn small" id="resetAvg">אפס מיצוע</button>
+    </div>
+    <div class="canvaswrap" id="cw">
+      <canvas id="plot"></canvas>
+      <div class="readout" id="readout" hidden></div>
+      <div class="hud" id="hud">
+        <div class="hud-spl"><span class="n" id="hSpl">--.-</span><span class="u" id="hUnit">dB(A)</span><span class="d" id="hDelta"></span></div>
+        <div class="hud-ctl">
+          <button data-iv="spectrum" aria-pressed="true">ספקטרום</button>
+          <button data-iv="sgram" aria-pressed="false">ספקטרוגרמה</button>
+          <button data-iv="bars" aria-pressed="false">1/3</button>
+          <button id="hEar" aria-pressed="true" title="משקלל את התצוגה לפי רגישות האוזן ברמה הנוכחית">כמו האוזן</button>
+          <button id="hTrail" aria-pressed="true">עקבות</button>
+          <button id="hTgt" aria-pressed="false">יעד</button>
+          <button id="hRot" aria-pressed="true">לרוחב</button>
+        </div>
+        <div class="hud-band" id="hBand"></div>
+        <button class="hud-exit" id="hExit" aria-label="צא ממסך מלא">✕ יציאה</button>
+      </div>
+      <div class="hint" id="hint">לחיצה כפולה מוסיפה פס · גרירה מזיזה · גלגלת או צביטה בשתי אצבעות משנה Q</div>
+    </div>
+    <div class="nodebar" id="nodebar" hidden>
+      <span class="swatch" id="nbSw"></span><b id="nbTitle" class="mono">Band 1</b>
+      <label>סוג
+        <select class="sel" id="nbType">
+          <option value="bell">Bell</option><option value="lowshelf">Low Shelf</option><option value="highshelf">High Shelf</option>
+          <option value="highpass">Low Cut</option><option value="lowpass">High Cut</option><option value="notch">Notch</option>
+        </select></label>
+      <label>תדר <input type="number" id="nbF" min="20" max="20000" step="1"> Hz</label>
+      <label>גיין <input type="number" id="nbG" min="-24" max="24" step="0.1"> dB</label>
+      <label>Q <input type="range" id="nbQ" min="0" max="1" step="0.001"><span class="mono" id="nbQv">1.00</span></label>
+      <label class="tog"><input type="checkbox" id="nbOn" checked>פעיל</label>
+      <button class="btn small" id="nbDel">מחק פס</button>
+    </div>
+  </section>
+
+  <section class="grid">
+    <div class="card panel">
+      <h2>מקור ומיקרופון <small id="profQ">—</small></h2>
+      <div class="field"><span class="lbl">מקור אות</span>
+        <div class="seg" id="srcSeg">
+          <button data-s="mic" aria-pressed="false">מיקרופון</button>
+          <button data-s="file" aria-pressed="false">קובץ</button>
+          <button data-s="demo" aria-pressed="true">הדגמה</button>
+        </div>
+      </div>
+      <div class="field" id="devField"><span class="lbl">התקן קלט</span>
+        <select id="devSel"><option value="">ברירת מחדל של המערכת</option></select>
+      </div>
+      <div class="field" id="fileField" hidden><span class="lbl">קובץ אודיו (הקלטה מהאולם, רעש ורוד, מוזיקה)</span>
+        <input type="file" id="fileIn" accept="audio/*">
+        <label class="tog"><input type="checkbox" id="monitor">השמע ברמקולים בזמן הניתוח</label>
+      </div>
+      <div class="field"><span class="lbl">פרופיל מיקרופון</span>
+        <select id="profSel"></select>
+        <span class="note" id="profNote"></span>
+      </div>
+      <div class="field"><span class="lbl">קובץ כיול (UMIK / Dayton / Sonarworks · תדר + dB)</span>
+        <input type="file" id="calFile" accept=".txt,.cal,.frd,.csv,text/plain">
+        <span class="note mono" id="calInfo"></span>
+      </div>
+      <div class="calbox">
+        <div class="row" style="justify-content:space-between"><b style="font-size:13px">כיול רמה</b><span class="note mono" id="offInfo">offset —</span></div>
+        <div class="seg" id="calSeg">
+          <button data-c="calib" aria-pressed="true">קלברטור</button>
+          <button data-c="ref" aria-pressed="false">מד SPL ייחוס</button>
+        </div>
+        <div class="row"><span class="note" id="calLbl">רמת הקלברטור</span><input type="number" id="calRef" value="94" step="0.1"><span class="note mono">dB</span></div>
+        <div class="row"><button class="btn small warm" id="calGo">כייל עכשיו (3 שנ׳)</button><button class="btn small" id="calReset">אפס לברירת מחדל</button><span class="note" id="calStatus"></span></div>
+      </div>
+      <div style="margin-top:12px">
+        <div class="row" style="justify-content:space-between"><b style="font-size:13px">אמינות המדידה</b><span class="mono" id="relV">—</span></div>
+        <div class="score"><div class="bar"><i id="relBar" style="width:0"></i></div></div>
+        <ul class="checks" id="checks"></ul>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <h2>יעד וכיוון המאסטר <small id="anaSrc">מקור ניתוח: מיצוע איטי</small></h2>
+      <div class="field"><span class="lbl">עקומת יעד</span>
+        <select id="curveSel">
+          <option value="flat">שטוח (ייחוס)</option>
+          <option value="house" selected>House — חם ומאוזן</option>
+          <option value="live">הופעה חיה / להקה</option>
+          <option value="club">מועדון / אלקטרוני</option>
+          <option value="speech">דיבור / כנס</option>
+        </select>
+      </div>
+      <div class="field"><span class="lbl">הטיה <span class="mono" id="tiltV">0.0 dB/oct</span></span>
+        <input type="range" id="tilt" min="-3" max="3" step="0.1" value="0">
+      </div>
+      <div class="row" style="margin-bottom:10px">
+        <label class="note">מקס׳ פסים <input type="number" id="maxBands" value="6" min="1" max="8" style="width:52px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px" class="mono"></label>
+        <label class="note">הגברה מקס׳ <input type="number" id="maxBoost" value="3" min="0" max="9" step="0.5" style="width:58px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px" class="mono"> dB</label>
+      </div>
+      <div class="master"><span class="note">מאסטר:</span><span class="delta mono" id="mGain" dir="ltr">--</span><span class="note" id="mGainTxt"></span></div>
+      <div class="row" style="margin-bottom:8px">
+        <button class="btn warm" id="suggestBtn">חשב EQ מוצע</button>
+        <button class="btn" id="applyBtn">החל על הגרף</button>
+        <button class="btn small" id="copyBtn">העתק הגדרות</button>
+      </div>
+      <div class="list" id="sugList"><div class="empty">לחץ “חשב EQ מוצע” כדי לקבל פסים לפי היענות החדר.</div></div>
+      <p class="note" style="margin:10px 0 0">החיתוכים קודמים להגברות. שקעים צרים הם לרוב ביטולי פאזה של החדר — הגברה לא תמלא אותם, ולכן הם מסומנים ולא מתוקנים.</p>
+    </div>
+
+    <div class="card panel">
+      <h2>עומסים לפי תחום <small>מול היעד</small></h2>
+      <div class="seg" id="loadSeg" style="margin-bottom:10px">
+        <button data-l="basic" aria-pressed="true">בסיסי · 6 תחומים</button>
+        <button data-l="detail" aria-pressed="false">מפורט · 11 תחומים</button>
+      </div>
+      <div class="loads" id="loads"></div>
+      <h2 style="margin-top:16px">הצטברויות ותהודות <small id="buildCount">0</small></h2>
+      <div class="list" id="buildList"></div>
+    </div>
+
+    <div class="card panel">
+      <h2>מיקומי מדידה <small id="posCount">0 מיקומים</small></h2>
+      <p class="note" style="margin:0 0 10px">מדוד בכמה נקודות בקהל (3–6), הוסף כל אחת אחרי שהמיצוע התייצב. ההצעות יחושבו על הממוצע המרחבי — יציב יותר ממיקום בודד.</p>
+      <div class="row">
+        <button class="btn" id="posAdd">הוסף מיקום נוכחי</button>
+        <button class="btn small" id="posClear">נקה</button>
+        <label class="tog"><input type="checkbox" id="posUse" checked>נתח לפי הממוצע</label>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <h2>מחולל רעש <small>להשמעה דרך המערכת</small></h2>
+      <div class="seg" id="noiseSeg" style="margin-bottom:8px">
+        <button data-n="pink" aria-pressed="true">ורוד</button>
+        <button data-n="white" aria-pressed="false">לבן</button>
+        <button data-n="brown" aria-pressed="false">חום</button>
+      </div>
+      <p class="note" id="noiseNote" style="margin:0 0 10px"></p>
+      <p class="note" style="margin:0 0 10px">חבר את יציאת המכשיר לקונסולה, הרם בהדרגה עד שהרעש גבוה ב־10 dB לפחות מרעש הרקע. זהירות על השמיעה ועל הטוויטרים.</p>
+      <div class="row">
+        <button class="btn" id="pinkBtn">נגן רעש</button>
+        <input type="range" id="pinkLvl" min="-40" max="-6" value="-24" style="flex:1;min-width:110px" aria-label="רמת רעש">
+        <span class="mono note" id="pinkLvlV">-24 dBFS</span>
+      </div>
+    </div>
+
+    <div class="card panel">
+      <h2>תמונות להשוואה</h2>
+      <p class="note" style="margin:0 0 10px">שמור עקומה לפני ואחרי שינוי ב־EQ כדי לראות את ההשפעה בפועל באולם.</p>
+      <div class="row">
+        <button class="btn" id="snapBtn">שמור תמונה</button>
+        <button class="btn small" id="snapClear">נקה</button>
+        <span class="note" id="snapInfo">אין תמונות</span>
+      </div>
+    </div>
+  </section>
+  <div class="foot">פרופילי המיקרופון המובנים מקורבים. לדיוק מלא: מיקרופון מדידה עם קובץ כיול אישי, וכיול רמה מול קלברטור.</div>
+</div>
+
+<script>
+(()=>{
+"use strict";
+const $=s=>document.querySelector(s), $$=s=>[...document.querySelectorAll(s)];
+const LS={get(k,d){try{const v=localStorage.getItem("resona."+k);return v==null?d:JSON.parse(v)}catch(e){return d}},set(k,v){try{localStorage.setItem("resona."+k,JSON.stringify(v))}catch(e){}}};
+const clamp=(v,a,b)=>Math.max(a,Math.min(b,v));
+const db10=p=>10*Math.log10(Math.max(p,1e-30));
+const K_FS=8.2;           // analyser bin-power sum -> dBFS rms (Blackman, Web Audio scaling)
+const THIRD=0.2316;       // 1/3-octave relative bandwidth
+const FMIN=20,FMAX=20000,NP=560;
+const BAND_COLORS=["#ff8a5c","#ffd166","#7bd389","#62c9ff","#b59bff","#f472b6","#5eead4","#fca5a5"];
+const NOTES=["C","C#","D","D#","E","F","F#","G","G#","A","A#","B"];
+const noteOf=f=>{const n=Math.round(12*Math.log2(f/440)+69);return NOTES[(n%12+12)%12]+(Math.floor(n/12)-1)};
+const fmtF=f=>f>=1000?(f/1000).toFixed(f>=10000?1:2).replace(/\.?0+$/,"")+"k":Math.round(f)+"";
+
+/* ---------- microphone profiles (mic's own response in dB; correction subtracts it) ---------- */
+const PROFILES=[
+ {id:"iphone",name:"iPhone — מיקרופון מובנה",sens:118,range:[80,16000],q:"מקורב",
+  curve:[[20,-13],[31.5,-8],[50,-4],[80,-1.5],[125,0],[1000,0],[4000,.5],[8000,1.5],[11000,2],[14000,0],[17000,-4],[20000,-9]],
+  note:"המיקרופון התחתון. כוון את תחתית המכשיר לרמקולים, אל תחזיק ביד מעל הפתח. מתחת ל־80 Hz ומעל 16 kHz הקריאה פחות אמינה."},
+ {id:"ipad",name:"iPad — מיקרופון מובנה",sens:117,range:[80,15000],q:"מקורב",
+  curve:[[20,-14],[40,-7],[63,-3],[100,-.8],[150,0],[2000,0],[6000,1.2],[10000,1.5],[13000,-1],[16000,-5],[20000,-11]],
+  note:"המיקרופונים בשולי המסגרת. הנח על מעמד, לא על משטח שיוצר החזרים."},
+ {id:"android",name:"Android — מיקרופון מובנה",sens:120,range:[100,12000],q:"גס",
+  curve:[[20,-16],[40,-9],[80,-3.5],[150,0],[2000,0],[5000,1.5],[9000,3],[12000,0],[16000,-5],[20000,-12]],
+  note:"ההבדלים בין דגמים גדולים. הדפדפן לא תמיד מכבה עיבוד אות. מומלץ כיול רמה ומיקרופון חיצוני."},
+ {id:"usbxy",name:"מיקרופון USB‑C / Lightning לטלפון (סטריאו בסגנון Zoom/Shure)",sens:121,range:[40,18000],q:"מקורב",
+  curve:[[20,-6],[35,-2],[60,0],[2500,0],[5000,2],[8000,1.5],[12000,0],[18000,-2],[20000,-5]],
+  note:"כבה לימיטר ו־AGC במיקרופון עצמו. עדיף מצב מונו/אמצע ותבנית רחבה. הגבר נמוך מספיק כדי לא להגיע לקליפ."},
+ {id:"umik",name:"מיקרופון מדידה USB (UMIK‑1 / iMM‑6C)",sens:115,range:[20,20000],q:"מדויק עם כיול",
+  curve:[[20,0],[20000,0]],
+  note:"טען את קובץ הכיול האישי לפי המספר הסידורי (0° לרמקול, 90° לתקרה). כיוון רמה מול קלברטור משלים את הדיוק."},
+ {id:"iface",name:"כרטיס קול + מיקרופון מדידה XLR (EMM‑6 / ECM8000 / M23)",sens:110,range:[20,20000],q:"מדויק עם כיול",
+  curve:[[20,0],[7000,0],[11000,.8],[15000,2],[20000,3]],
+  note:"הפעל פנטום 48V, קבע גיין ואל תיגע בו אחרי הכיול. העקומה המובנית היא ממוצע ל־ECM8000; עם קובץ כיול היא מוחלפת."},
+ {id:"custom",name:"פרופיל מותאם (מקובץ כיול)",sens:115,range:[20,20000],q:"מותאם",curve:[[20,0],[20000,0]],note:"נוצר מקובץ הכיול שטענת."},
+ {id:"demo",name:"מיקרופון וירטואלי (הדגמה)",sens:112,range:[20,20000],q:"וירטואלי",curve:[[20,0],[20000,0]],note:"אות מדומה: רעש ורוד דרך מערכת וחדר עם מודים ב־52 ו־125 Hz, ביטול ב־88 Hz ודעיכת גבוהים."}
+];
+const profById=id=>PROFILES.find(p=>p.id===id)||PROFILES[0];
+
+/* ---------- targets ---------- */
+const CURVES={
+ flat:[[20,0],[20000,0]],
+ house:[[20,5],[40,5],[100,3],[250,.5],[1000,0],[4000,-1.5],[10000,-3.5],[16000,-5],[20000,-6]],
+ live:[[20,4],[40,8],[63,8],[125,4],[300,0],[1000,0],[4000,-2],[10000,-4.5],[16000,-7],[20000,-8]],
+ club:[[20,8],[35,12],[60,12],[120,6],[300,0],[2000,-1],[8000,-3],[16000,-5],[20000,-6]],
+ speech:[[20,-18],[50,-12],[100,-4],[200,0],[3000,0],[6000,-1.5],[10000,-4],[16000,-9],[20000,-12]]
+};
+const interpLog=(pts,f)=>{if(f<=pts[0][0])return pts[0][1];const n=pts.length;if(f>=pts[n-1][0])return pts[n-1][1];
+ for(let i=1;i<n;i++)if(f<=pts[i][0]){const a=pts[i-1],b=pts[i];const t=Math.log(f/a[0])/Math.log(b[0]/a[0]);return a[1]+(b[1]-a[1])*t}return 0};
+
+/* ---------- weightings ---------- */
+const wA=f=>{const f2=f*f;const r=12194**2*f2*f2/((f2+20.6**2)*Math.sqrt((f2+107.7**2)*(f2+737.9**2))*(f2+12194**2));return 20*Math.log10(r)+2.0};
+const wC=f=>{const f2=f*f;const r=12194**2*f2/((f2+20.6**2)*(f2+12194**2));return 20*Math.log10(r)+0.062};
+const wDb=(w,f)=>w==="A"?wA(f):w==="C"?wC(f):0;
+
+/* ---------- biquad magnitude (RBJ cookbook) ---------- */
+function bqMag(b,f,fs){
+ const w0=2*Math.PI*clamp(b.f,10,fs*0.49)/fs,cw=Math.cos(w0),sw=Math.sin(w0),Q=b.q,al=sw/(2*Q),A=Math.pow(10,b.g/40);
+ let b0,b1,b2,a0,a1,a2;
+ switch(b.type){
+  case "lowshelf":{const s=2*Math.sqrt(A)*al;b0=A*((A+1)-(A-1)*cw+s);b1=2*A*((A-1)-(A+1)*cw);b2=A*((A+1)-(A-1)*cw-s);a0=(A+1)+(A-1)*cw+s;a1=-2*((A-1)+(A+1)*cw);a2=(A+1)+(A-1)*cw-s;break}
+  case "highshelf":{const s=2*Math.sqrt(A)*al;b0=A*((A+1)+(A-1)*cw+s);b1=-2*A*((A-1)+(A+1)*cw);b2=A*((A+1)+(A-1)*cw-s);a0=(A+1)-(A-1)*cw+s;a1=2*((A-1)-(A+1)*cw);a2=(A+1)-(A-1)*cw-s;break}
+  case "highpass":b0=(1+cw)/2;b1=-(1+cw);b2=(1+cw)/2;a0=1+al;a1=-2*cw;a2=1-al;break;
+  case "lowpass":b0=(1-cw)/2;b1=1-cw;b2=(1-cw)/2;a0=1+al;a1=-2*cw;a2=1-al;break;
+  case "notch":b0=1;b1=-2*cw;b2=1;a0=1+al;a1=-2*cw;a2=1-al;break;
+  default:b0=1+al*A;b1=-2*cw;b2=1-al*A;a0=1+al/A;a1=-2*cw;a2=1-al/A;
+ }
+ const w=2*Math.PI*f/fs,c1=Math.cos(w),s1=Math.sin(w),c2=Math.cos(2*w),s2=Math.sin(2*w);
+ const nr=b0+b1*c1+b2*c2,ni=-(b1*s1+b2*s2),dr=a0+a1*c1+a2*c2,di=-(a1*s1+a2*s2);
+ return 10*Math.log10((nr*nr+ni*ni)/(dr*dr+di*di)+1e-30);
+}
+const hasGain=t=>t==="bell"||t==="lowshelf"||t==="highshelf";
+
+/* ---------- state ---------- */
+const S={
+ ctx:null,an:null,srcNode:null,stream:null,track:null,fileBuf:null,demoNodes:null,pink:null,pinkBuf:null,
+ running:false,source:"demo",frozen:false,
+ fft:16384,fs:48000,
+ profile:LS.get("profile","iphone"),offsets:LS.get("offsets",{}),custom:LS.get("custom",null),calMeta:LS.get("calMeta",{}),
+ w:"A",tw:"F",avgMode:"slow",smooth:1/6,view:"spectrum",
+ tgt:LS.get("target",{curve:"house",tilt:0,spl:95}),
+ bands:LS.get("bands",[]),sel:-1,
+ positions:[],snaps:[],sugg:[],masterGain:null,builds:[],
+ levelF:0,levelS:0,leqE:0,leqT:0,lmax:-1e9,peak:-1e9,peakHoldT:0,hist:[],lastHist:0,
+ procOK:null
+};
+if(S.custom){const c=profById("custom");c.curve=S.custom.curve;c.range=S.custom.range}
+let NB=S.fft/2,binHz=S.fs/S.fft;
+let fbuf,tbuf,pFast,pSlow,pInf,infN=0,corr,wBin,pref;
+const fpts=new Float64Array(NP),lnStep=Math.log(FMAX/FMIN)/(NP-1);
+for(let i=0;i<NP;i++)fpts[i]=FMIN*Math.exp(i*lnStep);
+const disp=new Float64Array(NP),live=new Float64Array(NP),peakH=new Float64Array(NP).fill(-200),tgtArr=new Float64Array(NP),eqArr=new Float64Array(NP);
+let wArr=new Float64Array(NP);
+
+function alloc(){
+ NB=S.fft/2;binHz=S.fs/S.fft;
+ fbuf=new Float32Array(NB);tbuf=new Float32Array(S.fft);
+ pFast=new Float64Array(NB);pSlow=new Float64Array(NB);pInf=new Float64Array(NB);infN=0;pref=new Float64Array(NB+1);
+ buildCorr();
+}
+function prof(){return profById(S.profile)}
+function offset(){const o=S.offsets[S.profile];return o!=null?o:prof().sens}
+function buildCorr(){
+ const p=prof();corr=new Float64Array(NB);wBin=new Float64Array(NB);
+ for(let k=0;k<NB;k++){const f=Math.max(k*binHz,1);corr[k]=Math.pow(10,-interpLog(p.curve,Math.max(f,10))/10);wBin[k]=k===0?0:Math.pow(10,wDb(S.w,f)/10)}
+ for(let i=0;i<NP;i++)wArr[i]=Math.pow(10,wDb(S.w,fpts[i])/10);
+}
+
+/* ---------- static demo spectrum (page at rest) ---------- */
+const ROOM=[{type:"highpass",f:38,g:0,q:.8},{type:"bell",f:52,g:10,q:5},{type:"bell",f:88,g:-11,q:7},{type:"bell",f:125,g:6,q:3},{type:"bell",f:240,g:4,q:2},{type:"bell",f:900,g:-2,q:1.4},{type:"bell",f:2600,g:2.5,q:1.6},{type:"highshelf",f:7000,g:-5,q:.7}];
+function seedStatic(){
+ let seed=7;const rnd=()=>(seed=(seed*16807)%2147483647)/2147483647;
+ const off=offset(),target=-20; // ~-20 dBFS pink
+ for(let k=1;k<NB;k++){
+  const f=k*binHz;let g=0;for(const b of ROOM)g+=bqMag(b,f,48000);
+  const base=Math.pow(10,(target-K_FS)/10)*binHz/(f*Math.log(FMAX/FMIN));
+  const jitter=Math.exp((rnd()-.5)*1.2);
+  const p=base*Math.pow(10,g/10)*jitter;
+  pFast[k]=p*Math.exp((rnd()-.5)*.8);pSlow[k]=p;pInf[k]=p;
+ }
+ infN=1;S.levelF=S.levelS=0;
+ let tot=0;for(let k=1;k<NB;k++)tot+=pSlow[k]*wBin[k];
+ S.levelF=S.levelS=tot;S.leqE=tot;S.leqT=1;S.lmax=db10(tot)+K_FS+off;S.peak=S.lmax+11;
+ for(let i=0;i<600;i++)S.hist.push(db10(tot)+K_FS+off+Math.sin(i/37)*1.6+Math.sin(i/9)*.7+(rnd()-.5)*1.5);
+}
+
+/* ---------- display computation ---------- */
+function buildPrefix(src){pref[0]=0;for(let k=0;k<NB;k++)pref[k+1]=pref[k]+src[k]}
+function integ(x,src){if(x<=0)return 0;if(x>=NB)return pref[NB];const i=Math.floor(x);return pref[i]+(x-i)*src[i]}
+function computeDisplay(src,out,oct){
+ buildPrefix(src);const off=offset()+K_FS,h=Math.pow(2,oct/2);
+ for(let i=0;i<NP;i++){
+  const f=fpts[i];let lo=f/h/binHz,hi=f*h/binHz;
+  if(hi-lo<1){const c=f/binHz;lo=c-.5;hi=c+.5}
+  const mean=(integ(hi,src)-integ(lo,src))/(hi-lo);
+  out[i]=db10(mean*THIRD*f/binHz)+off;
+ }
+}
+function bandSum(src,f1,f2){return integ(f2/binHz,src)-integ(f1/binHz,src)}
+function computeTarget(){
+ const c=CURVES[S.tgt.curve]||CURVES.flat;let tot=0;
+ for(let i=0;i<NP;i++){const f=fpts[i];tgtArr[i]=interpLog(c,f)+S.tgt.tilt*Math.log2(f/1000);tot+=Math.pow(10,tgtArr[i]/10)*wArr[i]*lnStep/THIRD}
+ const L0=S.tgt.spl-db10(tot);for(let i=0;i<NP;i++)tgtArr[i]+=L0;
+}
+function computeEQ(){eqArr.fill(0);for(const b of S.bands){if(!b.on)continue;for(let i=0;i<NP;i++)eqArr[i]+=bqMag(b,fpts[i],48000)}}
+function analysisSource(){
+ if(S.positions.length&&$("#posUse").checked){const a=new Float64Array(NB);for(const p of S.positions)for(let k=0;k<NB;k++)a[k]+=p[k]/S.positions.length;return {src:a,label:"ממוצע "+S.positions.length+" מיקומים"}}
+ return S.avgMode==="inf"?{src:pInf,label:"מיצוע מצטבר"}:{src:pSlow,label:"מיצוע איטי"};
+}
+
+/* ---------- audio ---------- */
+function ensureCtx(){
+ if(!S.ctx){const AC=window.AudioContext||window.webkitAudioContext;S.ctx=new AC({latencyHint:"interactive"});S.fs=S.ctx.sampleRate}
+ if(S.ctx.state==="suspended")S.ctx.resume();
+ if(!S.an||S.an.fftSize!==S.fft){S.an=S.ctx.createAnalyser();S.an.fftSize=S.fft;S.an.smoothingTimeConstant=0;S.an.minDecibels=-160;S.an.maxDecibels=0}
+ alloc();$("#srInfo").textContent=(S.fs/1000).toFixed(1)+" kHz · "+(S.fs/S.fft).toFixed(2)+" Hz/bin";
+}
+S.noiseBufs={};S.noise="pink";
+function makeNoise(type){
+ if(type==="pink")return makePinkBuffer();
+ if(S.noiseBufs[type])return S.noiseBufs[type];
+ const len=S.fs*10,buf=S.ctx.createBuffer(1,len,S.fs),d=buf.getChannelData(0);let ss=0,last=0;
+ for(let i=0;i<len;i++){const w=Math.random()*2-1;let v;if(type==="brown"){last=(last+.02*w)/1.02;v=last}else v=w;d[i]=v;ss+=v*v}
+ let m=0;for(let i=0;i<len;i++)m+=d[i];m/=len;ss=0;for(let i=0;i<len;i++){d[i]-=m;ss+=d[i]*d[i]}
+ const g=.1/Math.sqrt(ss/len);for(let i=0;i<len;i++)d[i]*=g;
+ for(let i=0;i<2048;i++){const t=i/2048;d[len-2048+i]=d[len-2048+i]*(1-t)+d[i]*t}
+ return S.noiseBufs[type]=buf;
+}
+const NOISE_INFO={pink:["רעש ורוד","אנרגיה שווה בכל אוקטבה — נראה שטוח ב־RTA. זה הרעש לכיוון מערכת."],
+ white:["רעש לבן","אנרגיה שווה בכל הרץ — עולה 3 dB לאוקטבה בגרף ומדגיש גבוהים. טוב לבדיקת טוויטרים ותקינות קו, פחות לכיוון."],
+ brown:["רעש חום","יורד 6 dB לאוקטבה — כבד בבסים. טוב לבדיקת סאבים, הצטברויות נמוכות ורעשושים, בזהירות על הוופרים."]};
+function makePinkBuffer(){
+ if(S.pinkBuf)return S.pinkBuf;
+ const len=S.fs*10,buf=S.ctx.createBuffer(1,len,S.fs),d=buf.getChannelData(0);
+ let b0=0,b1=0,b2=0,b3=0,b4=0,b5=0,b6=0,ss=0;
+ for(let i=0;i<len;i++){const w=Math.random()*2-1;b0=.99886*b0+w*.0555179;b1=.99332*b1+w*.0750759;b2=.969*b2+w*.153852;b3=.8665*b3+w*.3104856;b4=.55*b4+w*.5329522;b5=-.7616*b5-w*.016898;const v=b0+b1+b2+b3+b4+b5+b6+w*.5362;b6=w*.115926;d[i]=v;ss+=v*v}
+ const g=.1/Math.sqrt(ss/len);for(let i=0;i<len;i++)d[i]*=g;
+ // short crossfade loop point
+ for(let i=0;i<2048;i++){const t=i/2048;d[len-2048+i]=d[len-2048+i]*(1-t)+d[i]*t}
+ return S.pinkBuf=buf;
+}
+function stopSource(){
+ try{S.srcNode&&S.srcNode.disconnect()}catch(e){}
+ try{S.srcNode&&S.srcNode.stop&&S.srcNode.stop()}catch(e){}
+ if(S.demoNodes)S.demoNodes.forEach(n=>{try{n.disconnect()}catch(e){}});
+ if(S.stream)S.stream.getTracks().forEach(t=>t.stop());
+ S.srcNode=null;S.stream=null;S.track=null;S.demoNodes=null;S.running=false;S.procOK=null;
+ setStatus();
+}
+function resetMeters(){pFast.fill(0);pSlow.fill(0);pInf.fill(0);infN=0;S.levelF=S.levelS=0;S.leqE=0;S.leqT=0;S.lmax=-1e9;S.peak=-1e9;peakH.fill(-200)}
+async function startSource(){
+ ensureCtx();stopSource();resetMeters();hideBanner();
+ const ctx=S.ctx;
+ if(S.source==="demo"){
+  const src=ctx.createBufferSource();src.buffer=makePinkBuffer();src.loop=true;
+  let node=src;const chain=[src];
+  for(const b of ROOM){const f=ctx.createBiquadFilter();f.type=b.type==="bell"?"peaking":b.type;f.frequency.value=b.f;f.Q.value=b.q;f.gain.value=b.g;node.connect(f);node=f;chain.push(f)}
+  node.connect(S.an);src.start();S.srcNode=src;S.demoNodes=chain;S.running=true;
+  if(S.profile!=="demo"){S.profile="demo";$("#profSel").value="demo";onProfile()}
+ } else if(S.source==="mic"){
+  if(!navigator.mediaDevices||!navigator.mediaDevices.getUserMedia){showBanner("הדפדפן לא מאפשר גישה למיקרופון כאן. פתח את האפליקציה מכתובת HTTPS (או מקובץ מקומי בדפדפן במחשב).");return}
+  const devId=$("#devSel").value;
+  const c={echoCancellation:false,noiseSuppression:false,autoGainControl:false,channelCount:1,sampleRate:{ideal:48000}};
+  if(devId)c.deviceId={exact:devId};
+  try{
+   S.stream=await navigator.mediaDevices.getUserMedia({audio:c,video:false});
+  }catch(e){
+   showBanner(e&&e.name==="NotAllowedError"?"הגישה למיקרופון נחסמה. אשר גישה למיקרופון בהגדרות האתר בדפדפן (סמל המנעול ליד הכתובת) ורענן את הדף. בינתיים אפשר לעבוד עם הדגמה או קובץ.":"לא הצלחתי לפתוח את המיקרופון ("+(e&&e.name||"שגיאה")+"). בדוק שההתקן מחובר ושאין אפליקציה אחרת שתופסת אותו.");
+   S.source="demo";segSel("#srcSeg","s","demo");setSourceUI();setStatus();return;
+  }
+  S.track=S.stream.getAudioTracks()[0];
+  const st=S.track.getSettings?S.track.getSettings():{};
+  S.procOK=!(st.autoGainControl||st.noiseSuppression||st.echoCancellation);
+  S.srcNode=ctx.createMediaStreamSource(S.stream);S.srcNode.connect(S.an);S.running=true;
+  await listDevices();autoProfile(S.track.label||"");
+ } else if(S.source==="file"){
+  if(!S.fileBuf){showBanner("בחר קובץ אודיו בחלונית “מקור ומיקרופון”.");return}
+  const src=ctx.createBufferSource();src.buffer=S.fileBuf;src.loop=true;src.connect(S.an);
+  if($("#monitor").checked)src.connect(ctx.destination);
+  src.start();S.srcNode=src;S.running=true;
+ }
+ setStatus();
+}
+async function listDevices(){
+ if(!navigator.mediaDevices||!navigator.mediaDevices.enumerateDevices)return;
+ try{const devs=(await navigator.mediaDevices.enumerateDevices()).filter(d=>d.kind==="audioinput");const sel=$("#devSel"),cur=sel.value;
+  sel.innerHTML='<option value="">ברירת מחדל של המערכת</option>'+devs.map((d,i)=>`<option value="${d.deviceId}">${(d.label||("קלט "+(i+1))).replace(/</g,"&lt;")}</option>`).join("");sel.value=cur}catch(e){}
+}
+function autoProfile(label){
+ const l=label.toLowerCase();let id=null;
+ if(/umik|imm-?6|minidsp|dayton/.test(l))id="umik";
+ else if(/zoom|iq\d|shure|mv88|rode|videomic|usb/.test(l))id="usbxy";
+ else if(/scarlett|focusrite|motu|behringer|umc|audient|steinberg|presonus|interface/.test(l))id="iface";
+ else if(/iphone/.test(l))id="iphone";else if(/ipad/.test(l))id="ipad";
+ if(id&&id!==S.profile&&!(id==="umik"&&S.profile==="custom")){S.profile=id;$("#profSel").value=id;onProfile();toast("זוהה: "+profById(id).name)}
+}
+function togglePink(){
+ ensureCtx();
+ if(S.pink){stopNoise();return}
+ const src=S.ctx.createBufferSource();src.buffer=makeNoise(S.noise);src.loop=true;const g=S.ctx.createGain();
+ g.gain.value=Math.pow(10,(+$("#pinkLvl").value+20)/20);src.connect(g);g.connect(S.ctx.destination);src.start();
+ S.pink={src,g};$("#pinkBtn").textContent="עצור "+NOISE_INFO[S.noise][0];
+}
+
+/* ---------- per-frame analysis ---------- */
+let lastT=performance.now(),lastAna=0;
+function tick(now){
+ const dt=Math.min(.1,(now-lastT)/1000);lastT=now;
+ const off=offset();
+ if(S.running&&!S.frozen&&S.an){
+  S.an.getFloatFrequencyData(fbuf);S.an.getFloatTimeDomainData(tbuf);
+  const aF=1-Math.exp(-dt/.125),aS=1-Math.exp(-dt/1);let tot=0;infN++;
+  for(let k=1;k<NB;k++){const v=fbuf[k];const p=(v>-200&&isFinite(v)?Math.pow(10,v/10):0)*corr[k];
+   pFast[k]+=aF*(p-pFast[k]);pSlow[k]+=aS*(p-pSlow[k]);pInf[k]+=(p-pInf[k])/infN;tot+=p*wBin[k]}
+  S.levelF+=aF*(tot-S.levelF);S.levelS+=aS*(tot-S.levelS);S.leqE+=tot*dt;S.leqT+=dt;
+  let pk=0;for(let i=tbuf.length-4096;i<tbuf.length;i++){const a=Math.abs(tbuf[i]);if(a>pk)pk=a}
+  const pkDb=20*Math.log10(pk+1e-12)+off;S.peak=Math.max(pkDb,S.peak-dt*8);S.pkFS=20*Math.log10(pk+1e-12);
+  const L=db10(S.tw==="S"?S.levelS:S.levelF)+K_FS+off;if(S.leqT>1)S.lmax=Math.max(S.lmax,L);
+  if(now-S.lastHist>100){S.lastHist=now;S.hist.push(db10(S.levelF)+K_FS+off);if(S.hist.length>600)S.hist.shift()}
+ }
+ const mainSrc=S.avgMode==="fast"?pFast:S.avgMode==="slow"?pSlow:pInf;
+ computeDisplay(mainSrc,disp,S.smooth);
+ computeDisplay(pFast,live,Math.max(S.smooth,1/12));
+ for(let i=0;i<NP;i++)peakH[i]=Math.max(live[i],peakH[i]-dt*4);
+ if(now-lastAna>500){lastAna=now;analyze();updateMeterUI()}
+ draw(dt);
+ requestAnimationFrame(tick);
+}
+
+/* ---------- analysis: master gain, auto EQ, loads, buildups ---------- */
+let anaDisp=new Float64Array(NP),ana12=new Float64Array(NP),ana1=new Float64Array(NP);
+function analyze(){
+ const {src,label}=analysisSource();$("#anaSrc").textContent="מקור ניתוח: "+label;
+ computeDisplay(src,anaDisp,1/6);computeDisplay(src,ana12,1/12);computeDisplay(src,ana1,1);
+ computeTarget();
+ // level of analysis source with current weighting
+ let tot=0;for(let k=1;k<NB;k++)tot+=src[k]*wBin[k];
+ const lvl=db10(tot)+K_FS+offset();S.anaLevel=lvl;
+ S.masterGain=S.tgt.spl-lvl;
+ const mg=S.masterGain;$("#mGain").textContent=(mg>=0?"+":"")+mg.toFixed(1)+" dB";
+ $("#mGain").style.color=Math.abs(mg)<1.5?"var(--good)":Math.abs(mg)<4?"var(--warn)":"var(--bad)";
+ $("#mGainTxt").textContent=Math.abs(mg)<1?"ברמת היעד":(mg>0?"להעלות כדי להגיע ל־":"להוריד כדי להגיע ל־")+S.tgt.spl+" dB("+S.w+")";
+ renderLoads(src);detectBuildups();renderReliability();
+}
+function residual(){ // measured(1/6) - target, with overall level removed, inside reliable range
+ const r=new Float64Array(NP),p=prof();let s=0,n=0;
+ for(let i=0;i<NP;i++){r[i]=anaDisp[i]-tgtArr[i];const f=fpts[i];if(f>=150&&f<=5000){s+=r[i];n++}}
+ const m=n?s/n:0;for(let i=0;i<NP;i++)r[i]-=m;
+ const lo=Math.max(40,p.range[0]),hi=Math.min(14000,p.range[1]);
+ return {r,lo,hi};
+}
+function suggestEQ(){
+ if(!S.anaLevel||!isFinite(S.anaLevel)||S.anaLevel<20){toast("אין מספיק אות לניתוח");return}
+ const {r,lo,hi}=residual();const maxB=clamp(+$("#maxBands").value||6,1,8),maxBoost=clamp(+$("#maxBoost").value,0,9);
+ const out=[],skipped=[];const used=new Uint8Array(NP);
+ for(let it=0;it<maxB+6&&out.length<maxB;it++){
+  let bi=-1,bv=0;
+  for(let i=0;i<NP;i++){const f=fpts[i];if(f<lo||f>hi||used[i])continue;const v=r[i]>0?r[i]:r[i]*0.75;if(Math.abs(v)>Math.abs(bv)){bv=v;bi=i}}
+  if(bi<0)break;const val=r[bi];
+  if(val>0&&val<1.8)break; if(val<0&&-val<2.5&&Math.abs(bv)<1.8)break;
+  // width at half deviation
+  let a=bi,b=bi;const half=val/2;
+  while(a>0&&Math.sign(r[a-1])===Math.sign(val)&&Math.abs(r[a-1])>Math.abs(half))a--;
+  while(b<NP-1&&Math.sign(r[b+1])===Math.sign(val)&&Math.abs(r[b+1])>Math.abs(half))b++;
+  const bwOct=Math.max(.08,Math.log2(fpts[b]/fpts[a]));
+  const f=fpts[bi];
+  if(val<0&&(bwOct<.4||maxBoost===0)){skipped.push({f,dev:val,bw:bwOct});for(let i=a;i<=b;i++)used[i]=1;continue}
+  const g=val>0?-Math.min(val,12):Math.min(-val,maxBoost);
+  if(Math.abs(g)<1){for(let i=a;i<=b;i++)used[i]=1;continue}
+  const bw=Math.max(bwOct,.15),q=clamp(Math.sqrt(Math.pow(2,bw))/(Math.pow(2,bw)-1),.5,10);
+  const band={type:"bell",f:Math.round(f),g:+g.toFixed(1),q:+q.toFixed(2),on:true};
+  // shelves for broad edges
+  if(f<90&&bwOct>1.2&&g<0){band.type="lowshelf";band.f=Math.round(Math.min(f*2,150));band.q=.7}
+  if(f>6000&&bwOct>1.2){band.type="highshelf";band.f=Math.round(Math.max(f/2,4000));band.q=.7}
+  out.push(band);
+  for(let i=0;i<NP;i++)r[i]+=bqMag(band,fpts[i],48000);
+  for(let i=a;i<=b;i++)used[i]=1;
+ }
+ out.sort((x,y)=>x.f-y.f);S.sugg=out;S.skipped=skipped;renderSugg();
+}
+function renderSugg(){
+ const L=$("#sugList");
+ if(!S.sugg.length&&!(S.skipped||[]).length){L.innerHTML='<div class="empty">ההיענות קרובה ליעד — אין צורך בתיקון.</div>';return}
+ L.innerHTML=S.sugg.map((b,i)=>`<div class="item"><span class="swatch" style="background:${BAND_COLORS[i%8]}"></span>
+  <div><div class="t" dir="ltr" style="text-align:right">${typeName(b.type)} · ${fmtF(b.f)}Hz · ${b.g>0?"+":""}${b.g.toFixed(1)} dB · Q ${b.q.toFixed(2)}</div>
+  <div class="s">${b.g<0?(b.f<300?"חיתוך הצטברות נמוכה":"חיתוך עודף"):"השלמה עדינה"} · ${noteOf(b.f)}</div></div>
+  <button class="btn small" data-add="${i}">הוסף</button></div>`).join("")+
+  (S.skipped||[]).map(s=>`<div class="item" style="opacity:.75"><span class="badge">×</span><div><div class="t" dir="ltr" style="text-align:right">${fmtF(s.f)}Hz · ${s.dev.toFixed(1)} dB</div><div class="s">שקע צר — כנראה ביטול חדר. נסה להזיז רמקול/סאב, לא EQ.</div></div><span></span></div>`).join("");
+}
+const typeName=t=>({bell:"Bell",lowshelf:"Low Shelf",highshelf:"High Shelf",highpass:"Low Cut",lowpass:"High Cut",notch:"Notch"})[t]||t;
+
+const RANGES_D=[["סאב",20,60],["באס",60,160],["באס עליון",160,320],["נמוך־אמצע",320,600],["אמצע נמוך",600,900],["אמצע",900,1800],["אמצע עליון",1800,3200],["נוכחות",3200,5000],["בהירות",5000,8000],["גבוהים",8000,11000],["אוויר",11000,20000]];
+const RANGES=[["סאב",20,60],["באס",60,250],["נמוך־אמצע",250,500],["אמצע",500,2000],["עליון",2000,6000],["אוויר",6000,20000]];
+function renderLoads(src){
+ const RANGES_=S.loadsDetail?RANGES_D:RANGES;
+ buildPrefix(src);const off=offset()+K_FS;let all=0;const meas=RANGES_.map(([n,a,b])=>{const v=bandSum(src,a,b);all+=v;return v});
+ // target band energies
+ const tE=RANGES_.map(([n,a,b])=>{let s=0;for(let i=0;i<NP;i++)if(fpts[i]>=a&&fpts[i]<b)s+=Math.pow(10,tgtArr[i]/10)*lnStep/THIRD;return s});
+ const mg=S.masterGain||0;
+ $("#loads").innerHTML=RANGES_.map(([n,a,b],i)=>{
+  const m=db10(meas[i])+off,t=db10(tE[i]);const d=m+mg-t;const pct=Math.round(100*meas[i]/(all||1));
+  const w=clamp(Math.abs(d)/12*50,1,50);const col=Math.abs(d)<2?"var(--good)":Math.abs(d)<5?"var(--warn)":"var(--bad)";
+  const left=d>=0?50:50-w;
+  return `<div class="load"><span class="nm">${n}<span class="note mono" dir="ltr" style="text-align:right">${fmtF(a)}–${fmtF(b)} Hz</span></span>
+   <div class="track" dir="ltr"><b></b><i style="left:${left}%;width:${w}%;background:${col}"></i></div>
+   <span class="pc">${pct}%</span>
+   <span class="v mono" style="color:${col}">${d>=0?"+":""}${d.toFixed(1)}</span></div>`}).join("")+
+  `<div class="note" style="margin-top:2px">dB = הפרש מהיעד אחרי תיקון רמת המאסטר · % = חלק מהאנרגיה הכוללת</div>`;
+}
+function detectBuildups(){
+ const p=prof(),list=[];
+ for(let i=2;i<NP-2;i++){
+  const f=fpts[i];if(f<Math.max(25,p.range[0])||f>Math.min(10000,p.range[1]))continue;
+  const ex=ana12[i]-ana1[i];
+  if(ex>3.5&&ana12[i]>=ana12[i-1]&&ana12[i]>=ana12[i+1]&&ana12[i]>=ana12[i-2]&&ana12[i]>=ana12[i+2]){
+   let a=i,b=i;while(a>0&&ana12[a-1]>ana12[i]-3)a--;while(b<NP-1&&ana12[b+1]>ana12[i]-3)b++;
+   const bw=Math.max(.06,Math.log2(fpts[b]/fpts[a]));
+   list.push({f,ex,q:clamp(Math.sqrt(Math.pow(2,bw))/(Math.pow(2,bw)-1),1,12),i,kind:f<300?"מוד חדר":f<1500?"תהודה":"בליטה"});
+  }
+ }
+ list.sort((a,b)=>b.ex-a.ex);
+ const merged=[];for(const x of list){if(!merged.some(m=>Math.abs(Math.log2(m.f/x.f))<1/6))merged.push(x);if(merged.length>=6)break}
+ S.builds=merged.sort((a,b)=>a.f-b.f);
+ $("#buildCount").textContent=S.builds.length?S.builds.length+" זוהו":"אין";
+ $("#buildList").innerHTML=S.builds.length?S.builds.map((b,i)=>`<div class="item"><span class="badge mono" style="color:${b.ex>6?"var(--bad)":"var(--warn)"}">+${b.ex.toFixed(1)}</span>
+  <div><div class="t" dir="ltr" style="text-align:right">${fmtF(b.f)} Hz · ${noteOf(b.f)} · Q≈${b.q.toFixed(1)}</div><div class="s">${b.kind}</div></div>
+  <button class="btn small" data-cut="${i}">חתוך</button></div>`).join(""):'<div class="empty">לא זוהו הצטברויות חריגות.</div>';
+}
+function renderReliability(){
+ const p=prof(),checks=[];
+ if(S.source==="mic"){
+  checks.push(S.procOK===false?["bad","הדפדפן משאיר עיבוד אות (AGC / הפחתת רעש) פעיל — הרמות והבסים לא אמינים."]:S.procOK?["ok","עיבוד אות כבוי (AGC, הפחתת רעש, ביטול הד)."]:["warn","לא ניתן לאמת שעיבוד האות כבוי."]);
+ } else checks.push(["ok",S.source==="demo"?"אות הדגמה מדומה.":"ניתוח קובץ — הרמה המוחלטת תלויה בהקלטה."]);
+ const pq={"מדויק עם כיול":S.custom&&S.profile==="custom"?"ok":"warn","מותאם":"ok","מקורב":"warn","גס":"bad","וירטואלי":"ok"}[p.q]||"warn";
+ checks.push([S.profile==="custom"?"ok":pq,S.profile==="custom"?"עקומת כיול אישית נטענה.":p.q==="מדויק עם כיול"?"מיקרופון מדידה — טען קובץ כיול אישי לדיוק מלא.":"פרופיל "+p.q+" — סטייה צפויה של ±2–4 dB בקצוות."]);
+ const cm=S.calMeta[S.profile];
+ checks.push(S.profile==="demo"?["ok","כיול וירטואלי."]:cm?["ok","כויל "+(cm.mode==="calib"?"מול קלברטור":"מול מד ייחוס")+" · "+new Date(cm.t).toLocaleDateString("he-IL")]:["warn","הרמה לא כוילה — הקריאה מבוססת על רגישות טיפוסית."]);
+ const pk=S.pkFS;
+ if(S.running){
+  if(pk!=null&&pk>-1)checks.push(["bad","קליפינג בכניסה — הורד גיין."]);
+  else if(S.anaLevel<S.tgt.spl-35)checks.push(["warn","האות חלש מאוד יחסית ליעד — העלה רעש ורוד."]);
+  else checks.push(["ok","רמת אות תקינה, יש מרווח לפני קליפ."]);
+ } else checks.push(["warn","המדידה לא פעילה."]);
+ checks.push([p.range[0]<=40&&p.range[1]>=16000?"ok":"warn","טווח אמין: "+fmtF(p.range[0])+"–"+fmtF(p.range[1])+" Hz (מחוץ לו האזור מוצל בגרף)."]);
+ const sc={ok:1,warn:.5,bad:0},score=Math.round(100*checks.reduce((s,c)=>s+sc[c[0]],0)/checks.length);
+ $("#relV").textContent=score+"%";$("#relBar").style.width=score+"%";
+ $("#checks").innerHTML=checks.map(([s,t])=>`<li><span class="st ${s}">${s==="ok"?"✓":s==="warn"?"!":"×"}</span><span>${t}</span></li>`).join("");
+}
+
+/* ---------- meter UI ---------- */
+function updateMeterUI(){
+ const off=offset()+K_FS;
+ const L=S.tw==="L"?(S.leqT>0?db10(S.leqE/S.leqT)+off:NaN):db10(S.tw==="S"?S.levelS:S.levelF)+off;
+ const ok=isFinite(L)&&L>0;
+ $("#splBig").textContent=ok?L.toFixed(1):"--.-";
+ $("#splUnit").textContent="dB("+S.w+") "+(S.tw==="L"?"Leq":S.tw==="S"?"S":"F");
+ $("#stLeq").textContent=S.leqT>0?(db10(S.leqE/S.leqT)+off).toFixed(1):"--.-";
+ $("#stMax").textContent=S.lmax>0?S.lmax.toFixed(1):"--.-";
+ $("#stPeak").textContent=S.peak>0?S.peak.toFixed(1):"--.-";
+ const d=ok?L-S.tgt.spl:NaN;
+ $("#deltaV").textContent=isFinite(d)?(d>=0?"+":"")+d.toFixed(1)+" dB":"--";
+ $("#deltaV").style.color=!isFinite(d)?"":Math.abs(d)<1.5?"var(--good)":Math.abs(d)<4?"var(--warn)":"var(--bad)";
+ $("#deltaTxt").textContent=!isFinite(d)?"הפרש מהיעד":Math.abs(d)<1.5?"בטווח היעד":d>0?"מעל היעד":"מתחת ליעד";
+ $("#gaugeI").style.left=(50+clamp(isFinite(d)?d:0,-12,12)/12*50)+"%";
+ $("#clipTxt").textContent=S.pkFS!=null?"Headroom "+(-S.pkFS).toFixed(1)+" dB":"Headroom --";
+ $("#clipTxt").style.color=S.pkFS>-1?"var(--bad)":S.pkFS>-6?"var(--warn)":"";
+}
+
+/* ---------- drawing ---------- */
+const cv=$("#plot"),cx=cv.getContext("2d"),hc=$("#hist"),hx=hc.getContext("2d");
+let W=0,H=0,DPR=1,sg=null,sgx=null;
+const PAD={l:42,r:40,t:14,b:24};
+function resize(){
+ DPR=Math.min(2,window.devicePixelRatio||1);W=cv.offsetWidth;H=cv.offsetHeight;
+ cv.width=Math.round(W*DPR);cv.height=Math.round(H*DPR);cx.setTransform(DPR,0,0,DPR,0,0);
+ sg=document.createElement("canvas");sg.width=Math.max(1,Math.round(W-PAD.l-PAD.r));sg.height=Math.max(1,Math.round(H-PAD.t-PAD.b));sgx=sg.getContext("2d");sgx.fillStyle="#0b0f15";sgx.fillRect(0,0,sg.width,sg.height);
+ const hr=hc.getBoundingClientRect();hc.width=Math.round(hr.width*DPR);hc.height=Math.round(hr.height*DPR);hx.setTransform(DPR,0,0,DPR,0,0);
+}
+new ResizeObserver(resize).observe($("#cw"));
+const pw=()=>W-PAD.l-PAD.r,ph=()=>H-PAD.t-PAD.b;
+const xOf=f=>PAD.l+Math.log10(f/FMIN)/3*pw();
+const fOf=x=>FMIN*Math.pow(10,(x-PAD.l)/pw()*3);
+let dbTop=110,DBSPAN=60;
+const yOf=d=>PAD.t+(dbTop-d)/DBSPAN*ph();
+const EQR=18;const yEq=g=>PAD.t+ph()/2-g/EQR*ph()/2;const gOfY=y=>(PAD.t+ph()/2-y)/(ph()/2)*EQR;
+const GRID_F=[20,30,40,50,60,70,80,90,100,200,300,400,500,600,700,800,900,1000,2000,3000,4000,5000,6000,7000,8000,9000,10000,20000];
+const LAB_F=[20,50,100,200,500,1000,2000,5000,10000,20000];
+let hatch=null;
+function getHatch(){if(hatch)return hatch;const c=document.createElement("canvas");c.width=c.height=8;const g=c.getContext("2d");g.strokeStyle="rgba(138,150,170,.16)";g.lineWidth=1;g.beginPath();g.moveTo(0,8);g.lineTo(8,0);g.stroke();return hatch=cx.createPattern(c,"repeat")}
+
+function drawFrame(){
+ const g=cx.createLinearGradient(0,PAD.t,0,H);g.addColorStop(0,"#121a26");g.addColorStop(1,"#0a0e14");
+ cx.fillStyle=g;cx.fillRect(0,0,W,H);
+ const p=prof();
+ cx.fillStyle=getHatch();
+ if(p.range[0]>FMIN)cx.fillRect(PAD.l,PAD.t,xOf(p.range[0])-PAD.l,ph());
+ if(p.range[1]<FMAX)cx.fillRect(xOf(p.range[1]),PAD.t,W-PAD.r-xOf(p.range[1]),ph());
+ cx.lineWidth=1;
+ for(const f of GRID_F){const x=Math.round(xOf(f))+.5;cx.strokeStyle=LAB_F.includes(f)?"rgba(120,140,170,.20)":"rgba(120,140,170,.08)";cx.beginPath();cx.moveTo(x,PAD.t);cx.lineTo(x,PAD.t+ph());cx.stroke()}
+ cx.font="10.5px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.fillStyle="#6c788c";cx.textAlign="center";cx.textBaseline="top";
+ for(const f of LAB_F)cx.fillText(fmtF(f),clamp(xOf(f),PAD.l+10,W-PAD.r-10),H-PAD.b+6);
+}
+function drawDbAxis(){
+ cx.textAlign="right";cx.textBaseline="middle";
+ for(let d=Math.ceil((dbTop-DBSPAN)/10)*10;d<=dbTop;d+=10){const y=Math.round(yOf(d))+.5;cx.strokeStyle="rgba(120,140,170,.10)";cx.beginPath();cx.moveTo(PAD.l,y);cx.lineTo(W-PAD.r,y);cx.stroke();cx.fillStyle="#6c788c";cx.fillText(d,PAD.l-6,y)}
+}
+function pathOf(arr,yf){cx.beginPath();for(let i=0;i<NP;i++){const x=xOf(fpts[i]),y=yf(arr[i]);i?cx.lineTo(x,y):cx.moveTo(x,y)}}
+function autoRange(dt){
+ let mx=-200;for(let i=0;i<NP;i++)if(disp[i]>mx)mx=disp[i];
+ mx=Math.max(mx,S.tgt.spl-5);
+ const want=Math.ceil((mx+8)/10)*10;dbTop+=(want-dbTop)*Math.min(1,dt*2);
+}
+function draw(dt){
+ if(!W)return;
+ autoRange(dt);
+ if(S.imm&&S.view==="spectrum")drawImmersive(dt);
+ else if(S.view==="spectrum")drawSpectrum();
+ else if(S.view==="bars")drawBars();
+ else if(S.view==="sgram")drawSgram();
+ else drawScope();
+ drawHist();
+}
+function drawSpectrum(){
+ drawFrame();drawDbAxis();
+ cx.textAlign="left";cx.textBaseline="middle";cx.fillStyle="rgba(255,180,84,.6)";
+ for(const gg of [12,6,0,-6,-12])cx.fillText((gg>0?"+":"")+gg,W-PAD.r+6,yEq(gg));
+ cx.save();cx.beginPath();cx.rect(PAD.l,PAD.t,pw(),ph());cx.clip();
+ // target tolerance
+ if($("#tTarget").checked){
+  cx.beginPath();for(let i=0;i<NP;i++)cx.lineTo(xOf(fpts[i]),yOf(tgtArr[i]+3));for(let i=NP-1;i>=0;i--)cx.lineTo(xOf(fpts[i]),yOf(tgtArr[i]-3));cx.closePath();
+  cx.fillStyle="rgba(207,216,230,.06)";cx.fill();
+  pathOf(tgtArr,yOf);cx.setLineDash([5,5]);cx.strokeStyle="rgba(207,216,230,.55)";cx.lineWidth=1.2;cx.stroke();cx.setLineDash([]);
+ }
+ // snapshots
+ S.snaps.forEach((s,j)=>{pathOf(s.arr,yOf);cx.strokeStyle=j?"rgba(245,192,74,.6)":"rgba(255,255,255,.45)";cx.lineWidth=1.2;cx.setLineDash([2,3]);cx.stroke();cx.setLineDash([])});
+ // spatial avg
+ if(S.positions.length&&$("#posUse").checked){pathOf(anaDisp,yOf);cx.strokeStyle="rgba(181,155,255,.85)";cx.lineWidth=1.5;cx.setLineDash([6,3]);cx.stroke();cx.setLineDash([])}
+ // main spectrum fill
+ pathOf(disp,yOf);cx.lineTo(W-PAD.r,H);cx.lineTo(PAD.l,H);cx.closePath();
+ const sgd=cx.createLinearGradient(0,PAD.t,0,PAD.t+ph());sgd.addColorStop(0,"rgba(98,201,255,.42)");sgd.addColorStop(.6,"rgba(43,127,209,.16)");sgd.addColorStop(1,"rgba(43,127,209,.02)");
+ cx.fillStyle=sgd;cx.fill();
+ if($("#tLive").checked&&S.avgMode!=="fast"){pathOf(live,yOf);cx.strokeStyle="rgba(98,201,255,.28)";cx.lineWidth=1;cx.stroke()}
+ pathOf(disp,yOf);cx.shadowColor="rgba(98,201,255,.6)";cx.shadowBlur=8;cx.strokeStyle="#8fdaff";cx.lineWidth=1.6;cx.stroke();cx.shadowBlur=0;
+ if($("#tPeak").checked){pathOf(peakH,yOf);cx.strokeStyle="rgba(231,236,243,.35)";cx.lineWidth=1;cx.stroke()}
+ // predicted
+ computeEQ();
+ if($("#tPred").checked&&S.bands.some(b=>b.on)){cx.beginPath();for(let i=0;i<NP;i++){const x=xOf(fpts[i]),y=yOf(disp[i]+eqArr[i]);i?cx.lineTo(x,y):cx.moveTo(x,y)}cx.strokeStyle="rgba(123,224,162,.9)";cx.lineWidth=1.5;cx.stroke()}
+ // buildups
+ if($("#tBuild").checked)S.builds.forEach(b=>{const x=xOf(b.f),y=yOf(disp[b.i])-10;cx.fillStyle=b.ex>6?"#ff6b6b":"#f5c04a";cx.beginPath();cx.moveTo(x,y+6);cx.lineTo(x-5,y-3);cx.lineTo(x+5,y-3);cx.closePath();cx.fill();cx.font="10px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.textAlign="center";cx.textBaseline="bottom";cx.fillText(fmtF(b.f),x,y-5)});
+ // EQ
+ if($("#tEq").checked){
+  const z=yEq(0);cx.strokeStyle="rgba(255,180,84,.18)";cx.beginPath();cx.moveTo(PAD.l,z);cx.lineTo(W-PAD.r,z);cx.stroke();
+  S.bands.forEach((b,j)=>{if(!b.on)return;const col=BAND_COLORS[j%8];cx.beginPath();cx.moveTo(PAD.l,z);for(let i=0;i<NP;i++)cx.lineTo(xOf(fpts[i]),yEq(clamp(bqMag(b,fpts[i],48000),-EQR*1.2,EQR*1.2)));cx.lineTo(W-PAD.r,z);cx.closePath();cx.fillStyle=col+(j===S.sel?"40":"1c");cx.fill()});
+  if(S.bands.length){pathOf(eqArr,v=>yEq(clamp(v,-EQR*1.3,EQR*1.3)));cx.shadowColor="rgba(255,180,84,.7)";cx.shadowBlur=10;cx.strokeStyle="#ffb454";cx.lineWidth=2.2;cx.stroke();cx.shadowBlur=0}
+ }
+ cx.restore();
+ if($("#tEq").checked)S.bands.forEach((b,j)=>{const x=xOf(b.f),y=yEq(hasGain(b.type)?b.g:0),col=BAND_COLORS[j%8];
+  if(j===S.sel){cx.beginPath();cx.arc(x,y,15,0,7);cx.fillStyle=col+"33";cx.fill();
+   if(b.type==="bell"||b.type==="notch"){const bw=Math.asinh(1/(2*b.q))*2/Math.LN2,x1=xOf(b.f/Math.pow(2,bw/2)),x2=xOf(b.f*Math.pow(2,bw/2));
+    cx.strokeStyle=col+"aa";cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x1,y-4);cx.lineTo(x1,y+4);cx.moveTo(x1,y);cx.lineTo(x2,y);cx.moveTo(x2,y-4);cx.lineTo(x2,y+4);cx.stroke()}
+   const t="Q "+b.q.toFixed(2);cx.font="600 11px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");const tw=cx.measureText(t).width+12,ty=y>PAD.t+40?y-30:y+30;
+   cx.fillStyle=S.pinch?col:"rgba(18,24,35,.9)";cx.strokeStyle=col;cx.beginPath();cx.roundRect?cx.roundRect(x-tw/2,ty-10,tw,20,10):cx.rect(x-tw/2,ty-10,tw,20);cx.fill();cx.stroke();
+   cx.fillStyle=S.pinch?"#0b0f15":col;cx.textAlign="center";cx.textBaseline="middle";cx.fillText(t,x,ty)}
+  cx.beginPath();cx.arc(x,y,9,0,7);cx.fillStyle=b.on?col:"#3a4456";cx.fill();cx.lineWidth=2;cx.strokeStyle="#0b0f15";cx.stroke();
+  cx.fillStyle="#0b0f15";cx.font="600 10px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.textAlign="center";cx.textBaseline="middle";cx.fillText(j+1,x,y+.5)});
+ drawHover();
+}
+function drawBars(){
+ drawFrame();drawDbAxis();
+ const src=S.avgMode==="fast"?pFast:S.avgMode==="slow"?pSlow:pInf;buildPrefix(src);const off=offset()+K_FS;
+ const cs=[];for(let n=-17;n<=13;n++)cs.push(1000*Math.pow(2,n/3));
+ const h6=Math.pow(2,1/6);
+ if(!S.barPk)S.barPk=new Float64Array(31).fill(-200);
+ cs.forEach((c,i)=>{
+  const v=db10(bandSum(src,c/h6,c*h6))+off;S.barPk[i]=Math.max(v,S.barPk[i]-.15);
+  const x0=xOf(c/h6)+1.5,x1=xOf(c*h6)-1.5,y=yOf(v),yb=PAD.t+ph();
+  const gr=cx.createLinearGradient(0,yb,0,PAD.t);gr.addColorStop(0,"#1d4f86");gr.addColorStop(.55,"#3aa4e8");gr.addColorStop(.85,"#ffb454");gr.addColorStop(1,"#ff6b6b");
+  cx.fillStyle=gr;cx.fillRect(x0,Math.max(PAD.t,y),x1-x0,Math.max(0,yb-Math.max(PAD.t,y)));
+  cx.fillStyle="rgba(231,236,243,.8)";cx.fillRect(x0,yOf(S.barPk[i])-1,x1-x0,2);
+  if($("#tTarget").checked){const ti=Math.round(Math.log(c/FMIN)/lnStep);if(ti>=0&&ti<NP){const tv=tgtArr[ti]+10*Math.log10(1);cx.strokeStyle="rgba(207,216,230,.75)";cx.lineWidth=1.5;cx.beginPath();cx.moveTo(x0-1,yOf(tv));cx.lineTo(x1+1,yOf(tv));cx.stroke();cx.lineWidth=1}}
+ });
+ drawHover();
+}
+function cmap(t){t=clamp(t,0,1);const st=[[0,[11,15,21]],[.25,[29,40,92]],[.5,[43,127,209]],[.7,[98,201,255]],[.85,[255,180,84]],[1,[255,245,230]]];
+ for(let i=1;i<st.length;i++)if(t<=st[i][0]){const a=st[i-1],b=st[i],u=(t-a[0])/(b[0]-a[0]);return [0,1,2].map(k=>Math.round(a[1][k]+(b[1][k]-a[1][k])*u))}return st[st.length-1][1]}
+let sgAcc=0;
+function drawSgram(){
+ drawFrame();
+ if(sg&&S.running&&!S.frozen){
+  sgAcc++;if(sgAcc%2===0){
+   const w=sg.width;sgx.drawImage(sg,0,0,w,sg.height,0,2,w,sg.height);
+   const row=sgx.createImageData(w,2);const lo=dbTop-DBSPAN;
+   for(let x=0;x<w;x++){const f=fOf(x+PAD.l);const i=clamp(Math.round(Math.log(f/FMIN)/lnStep),0,NP-1);const c=cmap((live[i]-lo)/DBSPAN);for(let r=0;r<2;r++){const o=(r*w+x)*4;row.data[o]=c[0];row.data[o+1]=c[1];row.data[o+2]=c[2];row.data[o+3]=255}}
+   sgx.putImageData(row,0,0);
+  }
+ }
+ if(sg)cx.drawImage(sg,PAD.l,PAD.t,pw(),ph());
+ // color legend
+ const lg=cx.createLinearGradient(0,PAD.t+ph(),0,PAD.t);for(let t=0;t<=1;t+=.1){const c=cmap(t);lg.addColorStop(t,`rgb(${c})`)}
+ cx.fillStyle=lg;cx.fillRect(W-PAD.r+10,PAD.t,8,ph());
+ cx.fillStyle="#6c788c";cx.textAlign="left";cx.textBaseline="top";cx.fillText(Math.round(dbTop),W-PAD.r+4,PAD.t+ph()+6);
+ cx.textAlign="right";cx.textBaseline="middle";cx.fillText("עכשיו",PAD.l-4,PAD.t+8);cx.fillText("↓ זמן",PAD.l-4,PAD.t+24);
+ if(!S.running){cx.fillStyle="rgba(231,236,243,.6)";cx.textAlign="center";cx.fillText("הפעל מדידה כדי לראות את הספקטרוגרמה מתמלאת",PAD.l+pw()/2,PAD.t+ph()/2)}
+ drawHover();
+}
+function drawScope(){
+ const g=cx.createLinearGradient(0,0,0,H);g.addColorStop(0,"#121a26");g.addColorStop(1,"#0a0e14");cx.fillStyle=g;cx.fillRect(0,0,W,H);
+ const x0=PAD.l,w=pw(),y0=PAD.t,h=ph(),mid=y0+h/2;
+ cx.strokeStyle="rgba(120,140,170,.10)";for(let i=0;i<=10;i++){const x=Math.round(x0+w*i/10)+.5;cx.beginPath();cx.moveTo(x,y0);cx.lineTo(x,y0+h);cx.stroke()}
+ for(let i=0;i<=8;i++){const y=Math.round(y0+h*i/8)+.5;cx.beginPath();cx.moveTo(x0,y);cx.lineTo(x0+w,y);cx.stroke()}
+ cx.fillStyle="#6c788c";cx.textAlign="right";cx.textBaseline="middle";cx.fillText("0 dBFS",x0-4,y0+6);cx.fillText("0",x0-4,mid);
+ if(!S.running||!tbuf){cx.textAlign="center";cx.fillStyle="rgba(231,236,243,.6)";cx.fillText("הפעל מדידה כדי לראות את צורת הגל בזמן אמת",x0+w/2,mid-20);
+  cx.beginPath();for(let i=0;i<=400;i++){const t=i/400;const v=.35*Math.sin(t*Math.PI*8)+.15*Math.sin(t*Math.PI*29);const x=x0+t*w,y=mid-v*h/2;i?cx.lineTo(x,y):cx.moveTo(x,y)}cx.strokeStyle="rgba(143,218,255,.35)";cx.lineWidth=1.5;cx.stroke();return}
+ const N=2048,len=tbuf.length;let st=len-N*2;
+ for(let i=st;i<len-N;i++){if(tbuf[i-1]<0&&tbuf[i]>=0){st=i;break}}
+ let pk=0,ss=0;for(let i=0;i<N;i++){const v=tbuf[st+i];pk=Math.max(pk,Math.abs(v));ss+=v*v}
+ const rms=Math.sqrt(ss/N),gain=pk>0?Math.min(1/(pk*1.15),60):1;
+ cx.beginPath();for(let i=0;i<N;i++){const x=x0+i/N*w,y=mid-tbuf[st+i]*gain*h/2;i?cx.lineTo(x,y):cx.moveTo(x,y)}
+ cx.shadowColor="rgba(98,201,255,.7)";cx.shadowBlur=8;cx.strokeStyle="#8fdaff";cx.lineWidth=1.5;cx.stroke();cx.shadowBlur=0;
+ cx.setLineDash([4,4]);cx.strokeStyle="rgba(255,180,84,.7)";for(const s of [1,-1]){const y=mid-s*rms*gain*h/2;cx.beginPath();cx.moveTo(x0,y);cx.lineTo(x0+w,y);cx.stroke()}cx.setLineDash([]);
+ cx.textAlign="left";cx.textBaseline="top";cx.fillStyle="#cfd8e6";
+ cx.fillText(`${(N/S.fs*1000).toFixed(1)} ms · zoom ×${gain.toFixed(1)} · RMS ${(20*Math.log10(rms+1e-12)).toFixed(1)} dBFS · Peak ${(20*Math.log10(pk+1e-12)).toFixed(1)} dBFS · Crest ${(20*Math.log10((pk+1e-12)/(rms+1e-12))).toFixed(1)} dB`,x0+6,y0+6);
+}
+function drawHist(){
+ const w=hc.width/DPR,h=hc.height/DPR;if(!w)return;hx.clearRect(0,0,w,h);
+ const lo=S.tgt.spl-25,hi=S.tgt.spl+15,y=v=>h-(clamp(v,lo,hi)-lo)/(hi-lo)*h;
+ hx.fillStyle="rgba(91,211,139,.08)";hx.fillRect(0,y(S.tgt.spl+1.5),w,y(S.tgt.spl-1.5)-y(S.tgt.spl+1.5));
+ hx.strokeStyle="rgba(207,216,230,.5)";hx.setLineDash([4,4]);hx.beginPath();hx.moveTo(0,y(S.tgt.spl)+.5);hx.lineTo(w,y(S.tgt.spl)+.5);hx.stroke();hx.setLineDash([]);
+ const a=S.hist,n=a.length;if(n<2)return;
+ hx.beginPath();for(let i=0;i<n;i++){const x=w-(n-1-i)/599*w;i?hx.lineTo(x,y(a[i])):hx.moveTo(x,y(a[i]))}
+ const gl=hx.createLinearGradient(0,0,0,h);gl.addColorStop(0,"rgba(98,201,255,.35)");gl.addColorStop(1,"rgba(98,201,255,0)");
+ hx.lineTo(w,h);hx.lineTo(w-(n-1)/599*w,h);hx.closePath();hx.fillStyle=gl;hx.fill();
+ hx.beginPath();for(let i=0;i<n;i++){const x=w-(n-1-i)/599*w;i?hx.lineTo(x,y(a[i])):hx.moveTo(x,y(a[i]))}hx.strokeStyle="#8fdaff";hx.lineWidth=1.4;hx.stroke();
+ hx.fillStyle="#6c788c";hx.font="10px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");hx.textBaseline="top";hx.fillText(S.tgt.spl+" יעד",4,y(S.tgt.spl)+3);
+}
+
+/* ---------- immersive listening view ---------- */
+const IM={landscape:true,ear:true,trail:true,tgt:false,trails:[],tick:0,arr:new Float64Array(NP),sm:new Float64Array(NP),idleT:0,wake:null,top:100};
+const PAD_N={l:42,r:40,t:14,b:24};
+const HUES=[[20,[255,70,85]],[60,[255,120,60]],[150,[255,190,70]],[400,[150,230,120]],[1200,[70,215,200]],[3500,[80,160,255]],[9000,[150,110,255]],[20000,[225,120,255]]];
+function hueAt(f){if(f<=HUES[0][0])return HUES[0][1];for(let i=1;i<HUES.length;i++)if(f<=HUES[i][0]){const a=HUES[i-1],b=HUES[i],t=Math.log(f/a[0])/Math.log(b[0]/a[0]);return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*t))}return HUES[HUES.length-1][1]}
+function hGrad(alpha){const g=cx.createLinearGradient(PAD.l,0,W-PAD.r,0);for(const [f,c] of HUES)g.addColorStop(clamp(Math.log10(f/FMIN)/3,0,1),`rgba(${c},${alpha})`);return g}
+function earWeight(f,L){const t=clamp((L-50)/50,0,1);return wA(f)*(1-t)+wC(f)*t}
+function drawImmersive(dt){
+ const base=PAD.t+ph();                     // horizon
+ // data: fast response, ear-like 1/3 octave when "כמו האוזן"
+ computeDisplay(pFast,IM.arr,IM.ear?1/3:Math.max(S.smooth,1/12));
+ const L=db10(S.levelF)+K_FS+offset();
+ if(IM.ear)for(let i=0;i<NP;i++)IM.arr[i]+=earWeight(fpts[i],isFinite(L)?L:80);
+ const k=1-Math.exp(-dt/.06);for(let i=0;i<NP;i++)IM.sm[i]+=k*(IM.arr[i]-IM.sm[i]);
+ let mx=-200;for(let i=0;i<NP;i++)mx=Math.max(mx,IM.sm[i]);
+ IM.top+=(Math.ceil((mx+6)/6)*6-IM.top)*Math.min(1,dt*1.5);
+ const span=54,y=v=>PAD.t+(IM.top-v)/span*ph();
+ // background
+ const bg=cx.createRadialGradient(W/2,base,0,W/2,base,Math.max(W,H)*.8);bg.addColorStop(0,"#0d1420");bg.addColorStop(1,"#04060a");cx.fillStyle=bg;cx.fillRect(0,0,W,H);
+ // faint frequency guides
+ cx.font="10.5px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.textAlign="center";cx.textBaseline="top";
+ for(const f of LAB_F){const x=Math.round(xOf(f))+.5;cx.strokeStyle="rgba(140,160,190,.07)";cx.beginPath();cx.moveTo(x,PAD.t);cx.lineTo(x,base);cx.stroke();cx.fillStyle="rgba(140,160,190,.45)";cx.fillText(fmtF(f),clamp(x,PAD.l+10,W-PAD.r-10),base+8)}
+ // trails
+ if(S.running&&!S.frozen&&++IM.tick%3===0){IM.trails.push(Float64Array.from(IM.sm));if(IM.trails.length>14)IM.trails.shift()}
+ if(IM.trail)IM.trails.forEach((a,j)=>{cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(a[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}cx.strokeStyle=hGrad(.03+.10*j/IM.trails.length);cx.lineWidth=1;cx.stroke()});
+ // body
+ const body=()=>{cx.beginPath();cx.moveTo(PAD.l,base);for(let i=0;i<NP;i++)cx.lineTo(xOf(fpts[i]),Math.min(base,y(IM.sm[i])));cx.lineTo(W-PAD.r,base);cx.closePath()};
+ body();cx.fillStyle=hGrad(.30);cx.fill();
+ const vf=cx.createLinearGradient(0,PAD.t,0,base);vf.addColorStop(0,"rgba(5,7,11,0)");vf.addColorStop(1,"rgba(5,7,11,.55)");cx.fillStyle=vf;cx.fill();
+ cx.beginPath();for(let i=0;i<NP;i++){const xx=xOf(fpts[i]),yy=Math.min(base,y(IM.sm[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}
+ cx.save();cx.shadowColor="rgba(140,200,255,.55)";cx.shadowBlur=18;cx.strokeStyle=hGrad(1);cx.lineWidth=2.6;cx.stroke();cx.restore();
+ // reflection
+ cx.save();cx.beginPath();cx.rect(0,base,W,H-base);cx.clip();cx.translate(0,2*base);cx.scale(1,-1);body();cx.fillStyle=hGrad(.2);cx.fill();cx.restore();
+ const rf=cx.createLinearGradient(0,base,0,H);rf.addColorStop(0,"rgba(5,7,11,.2)");rf.addColorStop(.6,"rgba(5,7,11,.95)");cx.fillStyle=rf;cx.fillRect(0,base,W,H-base);
+ cx.strokeStyle="rgba(200,220,255,.18)";cx.beginPath();cx.moveTo(PAD.l,base+.5);cx.lineTo(W-PAD.r,base+.5);cx.stroke();
+ // target
+ if(IM.tgt){cx.setLineDash([5,6]);cx.beginPath();for(let i=0;i<NP;i+=2){const tv=tgtArr[i]-(S.masterGain||0)+(IM.ear?earWeight(fpts[i],isFinite(L)?L:80):0);const xx=xOf(fpts[i]);i?cx.lineTo(xx,y(tv)):cx.moveTo(xx,y(tv))}cx.strokeStyle="rgba(230,236,245,.45)";cx.lineWidth=1.2;cx.stroke();cx.setLineDash([])}
+ // dominant peaks — what stands out to the ear right now
+ const pk=[];for(let i=3;i<NP-3;i++){const f=fpts[i];if(f<30||f>14000)continue;const v=IM.sm[i];if(v>=IM.sm[i-1]&&v>=IM.sm[i+1]&&v>=IM.sm[i-3]&&v>=IM.sm[i+3])pk.push({i,v,f})}
+ pk.sort((a,b)=>b.v-a.v);const top=[];for(const p of pk){if(top.every(t=>Math.abs(Math.log2(t.f/p.f))>.6&&Math.abs(xOf(t.f)-xOf(p.f))>96))top.push(p);if(top.length>=3)break}
+ cx.font="600 11px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.textAlign="center";cx.textBaseline="middle";
+ top.forEach((p,j)=>{const xx=xOf(p.f),yy=y(p.v)-22;if(yy<PAD.t+8)return;const c=hueAt(p.f),t=`${fmtF(p.f)} · ${noteOf(p.f)}`,w=cx.measureText(t).width+16;
+  cx.globalAlpha=j?.75:1;cx.fillStyle=`rgba(${c},.16)`;cx.strokeStyle=`rgba(${c},.7)`;cx.beginPath();cx.roundRect?cx.roundRect(xx-w/2,yy-10,w,20,10):cx.rect(xx-w/2,yy-10,w,20);cx.fill();cx.stroke();
+  cx.fillStyle=`rgb(${c})`;cx.fillText(t,xx,yy);cx.beginPath();cx.arc(xx,y(p.v),3,0,7);cx.fill();cx.globalAlpha=1});
+ // HUD numbers
+ const ok=isFinite(L)&&L>0;$("#hSpl").textContent=ok?L.toFixed(1):"--.-";
+ const d=L-S.tgt.spl;const hd=$("#hDelta");hd.textContent=ok?(d>=0?"+":"")+d.toFixed(1)+" dB מהיעד":"";hd.style.color=Math.abs(d)<1.5?"var(--good)":Math.abs(d)<4?"var(--warn)":"var(--bad)";
+ $("#hUnit").textContent="dB("+S.w+") · "+(IM.ear?"תצוגה לפי האוזן":"תצוגה שטוחה");
+ if(IM.tick%15===0){buildPrefix(pFast);let all=0;const e=RANGES.map(r=>{const v=bandSum(pFast,r[1],r[2]);all+=v;return v});
+  $("#hBand").innerHTML=RANGES.map((r,i)=>{const c=hueAt(Math.sqrt(r[1]*r[2]));return `<span><b style="color:rgb(${c})">${Math.round(100*e[i]/(all||1))}%</b> ${r[0]}</span>`}).join("")}
+}
+function enterImm(){
+ S.imm=true;const st=$(".stage");st.classList.add("imm");Object.assign(PAD,{l:18,r:18,t:110,b:0});
+ if(!["spectrum","sgram","bars"].includes(S.view))setView("spectrum");
+ IM.trails=[];IM.sm.set(live);syncImmBtns();poke();
+ const lock=()=>{try{if(IM.landscape&&screen.orientation&&screen.orientation.lock)return screen.orientation.lock("landscape").catch(()=>{})}catch(e){}};
+ try{const r=st.requestFullscreen||st.webkitRequestFullscreen;if(r)Promise.resolve(r.call(st)).then(lock,()=>{}).finally(()=>setTimeout(layoutImm,250))}catch(e){}
+ try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>IM.wake=w).catch(()=>{})}catch(e){}
+ layoutImm();
+}
+function layoutImm(){
+ const st=$(".stage"),cw=$("#cw");if(!S.imm){st.classList.remove("rot");cw.style.width=cw.style.height=cw.style.transform="";return}
+ const vw=window.innerWidth,vh=window.innerHeight,rot=IM.landscape&&vh>vw;
+ st.classList.toggle("rot",rot);
+ if(rot){cw.style.width=vh+"px";cw.style.height=vw+"px";cw.style.transform=`translateX(${vw}px) rotate(90deg)`}
+ else{cw.style.width=cw.style.height=cw.style.transform=""}
+ requestAnimationFrame(()=>{PAD.b=Math.round(cw.offsetHeight*.24);PAD.t=cw.offsetHeight<480?84:110;resize()});
+}
+window.addEventListener("resize",()=>{if(S.imm)layoutImm()});
+window.addEventListener("orientationchange",()=>setTimeout(()=>{if(S.imm)layoutImm()},200));
+function exitImm(){
+ if(!S.imm)return;S.imm=false;$(".stage").classList.remove("imm","idle");Object.assign(PAD,PAD_N);
+ try{if(document.fullscreenElement)document.exitFullscreen();else if(document.webkitFullscreenElement)document.webkitExitFullscreen()}catch(e){}
+ try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}
+ try{IM.wake&&IM.wake.release()}catch(e){}IM.wake=null;layoutImm();requestAnimationFrame(resize);
+}
+function syncImmBtns(){$$(".hud-ctl [data-iv]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.iv===S.view));$("#hEar").setAttribute("aria-pressed",IM.ear);$("#hTrail").setAttribute("aria-pressed",IM.trail);$("#hTgt").setAttribute("aria-pressed",IM.tgt);$("#hRot").setAttribute("aria-pressed",IM.landscape)}
+function poke(){$(".stage").classList.remove("idle");clearTimeout(IM.idleT);IM.idleT=setTimeout(()=>{if(S.imm)$(".stage").classList.add("idle")},3000)}
+$("#immBtn").onclick=enterImm;$("#hExit").onclick=exitImm;
+$$(".hud-ctl [data-iv]").forEach(b=>b.onclick=()=>{setView(b.dataset.iv);syncImmBtns()});
+$("#hEar").onclick=()=>{IM.ear=!IM.ear;IM.trails=[];syncImmBtns()};
+$("#hTrail").onclick=()=>{IM.trail=!IM.trail;syncImmBtns()};
+$("#hTgt").onclick=()=>{IM.tgt=!IM.tgt;syncImmBtns()};
+$("#hRot").onclick=()=>{IM.landscape=!IM.landscape;try{IM.landscape?screen.orientation.lock("landscape").catch(()=>{}):screen.orientation.unlock()}catch(e){}syncImmBtns();layoutImm()};
+["pointermove","pointerdown"].forEach(ev=>$(".stage").addEventListener(ev,()=>{if(S.imm)poke()}));
+document.addEventListener("keydown",e=>{if(e.key==="Escape")exitImm();if((e.key==="f"||e.key==="F")&&!/INPUT|SELECT/.test(document.activeElement.tagName)){S.imm?exitImm():enterImm()}});
+const onFs=()=>{if(S.imm&&!document.fullscreenElement&&!document.webkitFullscreenElement&&IM.fsWas)exitImm();IM.fsWas=!!(document.fullscreenElement||document.webkitFullscreenElement)};
+document.addEventListener("fullscreenchange",onFs);document.addEventListener("webkitfullscreenchange",onFs);
+
+/* ---------- hover / interaction ---------- */
+let hov=null,drag=-1,lastTap=0;
+function drawHover(){
+ if(!hov||S.view==="scope"||S.imm){$("#readout").hidden=true;return}
+ const {x,y}=hov;if(x<PAD.l||x>W-PAD.r||y<PAD.t||y>PAD.t+ph()){$("#readout").hidden=true;return}
+ cx.strokeStyle="rgba(231,236,243,.25)";cx.beginPath();cx.moveTo(x+.5,PAD.t);cx.lineTo(x+.5,PAD.t+ph());cx.stroke();
+ const f=fOf(x),i=clamp(Math.round(Math.log(f/FMIN)/lnStep),0,NP-1);
+ if(S.view==="spectrum"){cx.beginPath();cx.arc(x,yOf(disp[i]),3.5,0,7);cx.fillStyle="#fff";cx.fill()}
+ const r=$("#readout");r.hidden=false;
+ r.textContent=`${f<1000?f.toFixed(0):(f/1000).toFixed(2)+"k"} Hz  ${noteOf(f)}  ·  ${disp[i].toFixed(1)} dB`+($("#tTarget").checked?`  ·  יעד ${(disp[i]-tgtArr[i]+(S.masterGain||0)).toFixed(1)>0?"+":""}${(disp[i]-tgtArr[i]+(S.masterGain||0)).toFixed(1)}`:"")+(S.bands.length?`  ·  EQ ${eqArr[i].toFixed(1)}`:"");
+ r.style.left=(x>W/2?Math.max(PAD.l,x-r.offsetWidth-12):x+12)+"px";
+}
+function pos(e){const r=cv.getBoundingClientRect();return {x:e.clientX-r.left,y:e.clientY-r.top}}
+function hitNode(p){if(S.imm||!$("#tEq").checked||S.view!=="spectrum")return -1;for(let j=S.bands.length-1;j>=0;j--){const b=S.bands[j];const dx=xOf(b.f)-p.x,dy=yEq(hasGain(b.type)?b.g:0)-p.y;if(dx*dx+dy*dy<20*20)return j}return -1}
+let tapStart=null;
+cv.addEventListener("pointerdown",e=>{if(S.pinch||!e.isPrimary)return;const p=pos(e);const j=hitNode(p);
+ if(j>=0){drag=j;selectBand(j);cv.setPointerCapture(e.pointerId);e.preventDefault();return}
+ tapStart={t:performance.now(),p};hov=p;
+});
+cv.addEventListener("pointermove",e=>{const p=pos(e);hov=p;
+ if(drag>=0&&!S.pinch){const b=S.bands[drag];b.f=Math.round(clamp(fOf(p.x),20,20000));if(hasGain(b.type))b.g=+clamp(gOfY(p.y),-18,18).toFixed(1);fillNodebar();saveBands()}
+ cv.style.cursor=drag>=0?"grabbing":hitNode(p)>=0?"grab":"crosshair";});
+cv.addEventListener("pointerup",e=>{drag=-1;if(!e.isPrimary||!tapStart)return;const now=performance.now(),p=pos(e),ts=tapStart;tapStart=null;
+ const pinched=now-(S.pinchedAt||0)<700,moved=Math.hypot(p.x-ts.p.x,p.y-ts.p.y)>12;
+ if(pinched||moved||now-ts.t>350){lastTap=0;return}
+ if(now-lastTap<350&&S.view==="spectrum"&&!S.imm){addBandAt(p);lastTap=0}else lastTap=now;});
+cv.addEventListener("pointercancel",()=>{drag=-1});
+const tdist=e=>Math.abs(e.touches[0].clientX-e.touches[1].clientX)+.35*Math.abs(e.touches[0].clientY-e.touches[1].clientY);
+cv.addEventListener("touchstart",e=>{
+ if(e.touches.length===2&&!S.imm&&S.view==="spectrum"&&S.bands.length){
+  let j=S.sel;const r=cv.getBoundingClientRect(),cx0=(e.touches[0].clientX+e.touches[1].clientX)/2-r.left;
+  if(j<0){let best=1e9;S.bands.forEach((b,k)=>{const d=Math.abs(xOf(b.f)-cx0);if(d<best){best=d;j=k}});if(best>120)j=-1}
+  if(j>=0){drag=-1;tapStart=null;S.pinchedAt=performance.now();selectBand(j);S.pinch={j,d0:Math.max(20,tdist(e)),q0:S.bands[j].q};e.preventDefault();return}
+ }
+ if(drag>=0||S.imm)e.preventDefault();
+},{passive:false});
+cv.addEventListener("touchmove",e=>{
+ if(S.pinch&&e.touches.length>=2){e.preventDefault();const b=S.bands[S.pinch.j];if(!b)return;
+  const ratio=Math.max(20,tdist(e))/S.pinch.d0;b.q=+clamp(S.pinch.q0/Math.pow(ratio,1.3),.3,20).toFixed(2);fillNodebar();saveBands();return}
+ if(drag>=0||S.imm)e.preventDefault();
+},{passive:false});
+cv.addEventListener("touchend",e=>{if(S.pinch&&e.touches.length<2){S.pinch=null;S.pinchedAt=performance.now();drag=-1;lastTap=0}});
+cv.addEventListener("touchcancel",()=>{S.pinch=null});
+cv.addEventListener("pointerleave",()=>{if(drag<0)hov=null});
+cv.addEventListener("dblclick",e=>e.preventDefault());
+cv.addEventListener("wheel",e=>{const j=S.sel>=0?S.sel:hitNode(pos(e));if(j<0)return;e.preventDefault();const b=S.bands[j];b.q=+clamp(b.q*Math.pow(1.1,e.deltaY>0?-1:1),.3,20).toFixed(2);fillNodebar();saveBands()},{passive:false});
+function addBandAt(p){if(S.bands.length>=8){toast("עד 8 פסים");return}const f=Math.round(clamp(fOf(p.x),20,20000));const g=+clamp(gOfY(p.y),-18,18).toFixed(1);S.bands.push({type:"bell",f,g,q:1.4,on:true});selectBand(S.bands.length-1);saveBands()}
+function selectBand(j){S.sel=j;fillNodebar()}
+const qToR=q=>Math.log(q/.3)/Math.log(20/.3),rToQ=r=>.3*Math.pow(20/.3,r);
+function fillNodebar(){
+ const nb=$("#nodebar");if(S.sel<0||!S.bands[S.sel]){nb.hidden=true;return}nb.hidden=false;const b=S.bands[S.sel];
+ $("#nbSw").style.background=BAND_COLORS[S.sel%8];$("#nbTitle").textContent="Band "+(S.sel+1);
+ $("#nbType").value=b.type;if(document.activeElement!==$("#nbF"))$("#nbF").value=b.f;if(document.activeElement!==$("#nbG"))$("#nbG").value=b.g;$("#nbG").disabled=!hasGain(b.type);
+ $("#nbQ").value=qToR(b.q);$("#nbQv").textContent=b.q.toFixed(2);$("#nbOn").checked=b.on;
+}
+function saveBands(){LS.set("bands",S.bands)}
+$("#nbType").onchange=e=>{const b=S.bands[S.sel];b.type=e.target.value;if(!hasGain(b.type))b.g=0;if(/shelf|pass/.test(b.type))b.q=.71;fillNodebar();saveBands()};
+$("#nbF").oninput=e=>{const v=+e.target.value;if(v>=20&&v<=20000){S.bands[S.sel].f=v;saveBands()}};
+$("#nbG").oninput=e=>{const v=+e.target.value;if(isFinite(v)){S.bands[S.sel].g=clamp(v,-24,24);saveBands()}};
+$("#nbQ").oninput=e=>{S.bands[S.sel].q=+rToQ(+e.target.value).toFixed(2);$("#nbQv").textContent=S.bands[S.sel].q.toFixed(2);saveBands()};
+$("#nbOn").onchange=e=>{S.bands[S.sel].on=e.target.checked;saveBands()};
+$("#nbDel").onclick=()=>{S.bands.splice(S.sel,1);S.sel=-1;fillNodebar();saveBands()};
+document.addEventListener("keydown",e=>{if((e.key==="Delete"||e.key==="Backspace")&&S.sel>=0&&!/INPUT|SELECT/.test(document.activeElement.tagName)){$("#nbDel").click()}});
+
+/* ---------- UI wiring ---------- */
+function segSel(sel,attr,val){$$(sel+" button").forEach(b=>b.setAttribute("aria-pressed",b.dataset[attr]===val?"true":"false"))}
+$$("#wChips [data-w]").forEach(b=>b.onclick=()=>{S.w=b.dataset.w;$$("#wChips [data-w]").forEach(x=>x.setAttribute("aria-pressed",x===b));buildCorr();S.leqE=0;S.leqT=0;S.lmax=-1e9;$("#tgtSplV").textContent=S.tgt.spl+" dB("+S.w+")"});
+$$("#wChips [data-t]").forEach(b=>b.onclick=()=>{S.tw=b.dataset.t;$$("#wChips [data-t]").forEach(x=>x.setAttribute("aria-pressed",x===b))});
+function setView(v){S.view=v;$$("#views .tab").forEach(x=>x.setAttribute("aria-selected",x.dataset.v===v));$("#hint").hidden=v!=="spectrum";if(v!=="spectrum"){S.sel=-1;fillNodebar()}}
+$$("#views .tab").forEach(b=>b.onclick=()=>setView(b.dataset.v));
+$("#smooth").onchange=e=>S.smooth=+e.target.value;
+$("#avg").onchange=e=>{S.avgMode=e.target.value};
+$("#fftSel").onchange=e=>{S.fft=+e.target.value;if(S.ctx){const was=S.running;S.an=null;ensureCtx();if(was)startSource()}else{alloc();seedStatic()}};
+$("#freezeBtn").onclick=e=>{S.frozen=!S.frozen;e.target.textContent=S.frozen?"שחרר":"הקפא";e.target.style.borderColor=S.frozen?"var(--spec)":""};
+$("#resetAvg").onclick=()=>{resetMeters();toast("המיצוע אופס")};
+$("#startBtn").onclick=async()=>{if(S.running){stopSource();return}await startSource()};
+$$("#srcSeg button").forEach(b=>b.onclick=async()=>{S.source=b.dataset.s;segSel("#srcSeg","s",S.source);setSourceUI();if(S.source==="mic"&&S.profile==="demo"){S.profile="iphone";$("#profSel").value="iphone";onProfile()}if(S.running||S.source!=="file")await startSource()});
+function setSourceUI(){$("#devField").hidden=S.source!=="mic";$("#fileField").hidden=S.source!=="file"}
+$("#devSel").onchange=()=>{if(S.source==="mic"&&S.running)startSource()};
+$("#fileIn").onchange=async e=>{const f=e.target.files[0];if(!f)return;ensureCtx();try{S.fileBuf=await S.ctx.decodeAudioData(await f.arrayBuffer());toast("נטען: "+f.name);startSource()}catch(err){showBanner("לא הצלחתי לפענח את הקובץ. נסה WAV, MP3 או M4A.")}};
+$("#monitor").onchange=()=>{if(S.source==="file"&&S.running)startSource()};
+function setStatus(){
+ $("#srcDot").classList.toggle("on",S.running);
+ $("#srcLabel").textContent=S.running?({mic:"מיקרופון פעיל",file:"מנתח קובץ",demo:"הדגמה חיה"})[S.source]:"הדגמה סטטית · מושהה";
+ $("#startBtn").textContent=S.running?"עצור":"הפעל מדידה";$("#startBtn").className=S.running?"btn":"btn primary";
+}
+// profiles
+$("#profSel").innerHTML=PROFILES.map(p=>`<option value="${p.id}">${p.name}</option>`).join("");$("#profSel").value=S.profile;
+function onProfile(){LS.set("profile",S.profile);const p=prof();$("#profNote").textContent=p.note;$("#profQ").textContent=p.q;
+ $("#offInfo").textContent="0 dBFS = "+offset().toFixed(1)+" dB SPL"+(S.offsets[S.profile]!=null?" (מכויל)":" (טיפוסי)");
+ if(fbuf)buildCorr();$("#calInfo").textContent=S.profile==="custom"&&S.custom?S.custom.info:"";}
+$("#profSel").onchange=e=>{S.profile=e.target.value;onProfile()};
+$("#calFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;const txt=await f.text();const pts=[];let sens=null;
+ for(const line of txt.split(/\r?\n/)){const m=line.match(/Sens\s*Factor\s*=\s*(-?[\d.]+)/i);if(m)sens=+m[1];const n=line.match(/^\s*(\d+(?:\.\d+)?)[\s,;]+(-?\d+(?:\.\d+)?)/);if(n){const fr=+n[1],d=+n[2];if(fr>=5&&fr<=40000&&isFinite(d))pts.push([fr,d])}}
+ if(pts.length<5){showBanner("לא נמצאו נקודות כיול בקובץ. הפורמט הצפוי: שורות של תדר ו־dB (למשל 1000 0.12).");return}
+ pts.sort((a,b)=>a[0]-b[0]);const c=profById("custom");c.curve=pts;c.range=[Math.max(20,pts[0][0]),Math.min(20000,pts[pts.length-1][0])];
+ S.custom={curve:pts,range:c.range,info:f.name+" · "+pts.length+" נקודות"+(sens!=null?" · Sens Factor "+sens+" dB":"")};LS.set("custom",S.custom);
+ S.profile="custom";$("#profSel").value="custom";onProfile();toast("קובץ הכיול נטען");};
+// calibration
+let calMode="calib";
+$$("#calSeg button").forEach(b=>b.onclick=()=>{calMode=b.dataset.c;segSel("#calSeg","c",calMode);$("#calLbl").textContent=calMode==="calib"?"רמת הקלברטור":"מה מראה מד הייחוס ("+S.w+")";$("#calRef").value=calMode==="calib"?94:85});
+$("#calGo").onclick=()=>{
+ if(!S.running){$("#calStatus").textContent="הפעל מדידה קודם.";return}
+ let e=0,t=0;const st=performance.now();$("#calGo").disabled=true;
+ const iv=setInterval(()=>{e+=S.levelF;t++;const left=3-(performance.now()-st)/1000;$("#calStatus").textContent="מודד… "+Math.max(0,left).toFixed(1);
+  if(left<=0){clearInterval(iv);$("#calGo").disabled=false;const meas=db10(e/t)+K_FS+offset();const ref=+$("#calRef").value;
+   if(!isFinite(meas)||e<=0){$("#calStatus").textContent="אין אות.";return}
+   S.offsets[S.profile]=offset()+(ref-meas);S.calMeta[S.profile]={mode:calMode,t:Date.now()};LS.set("offsets",S.offsets);LS.set("calMeta",S.calMeta);
+   $("#calStatus").textContent="תוקן ב־"+(ref-meas>=0?"+":"")+(ref-meas).toFixed(1)+" dB";onProfile();resetMeters()}},100);
+};
+$("#calReset").onclick=()=>{delete S.offsets[S.profile];delete S.calMeta[S.profile];LS.set("offsets",S.offsets);LS.set("calMeta",S.calMeta);onProfile();$("#calStatus").textContent="הוחזר לרגישות טיפוסית"};
+// target
+$("#tgtSpl").value=S.tgt.spl;$("#curveSel").value=S.tgt.curve;$("#tilt").value=S.tgt.tilt;
+const syncTgt=()=>{$("#tgtSplV").textContent=S.tgt.spl+" dB("+S.w+")";$("#tiltV").textContent=(S.tgt.tilt>=0?"+":"")+(+S.tgt.tilt).toFixed(1)+" dB/oct";LS.set("target",S.tgt);computeTarget()};
+$("#tgtSpl").oninput=e=>{S.tgt.spl=+e.target.value;syncTgt()};
+$("#curveSel").onchange=e=>{S.tgt.curve=e.target.value;syncTgt()};
+$("#tilt").oninput=e=>{S.tgt.tilt=+e.target.value;syncTgt()};
+$("#suggestBtn").onclick=()=>{analyze();suggestEQ()};
+$("#applyBtn").onclick=()=>{if(!S.sugg.length){analyze();suggestEQ()}if(!S.sugg.length)return;S.bands=S.sugg.map(b=>({...b}));S.sel=-1;fillNodebar();saveBands();toast("הוחלו "+S.bands.length+" פסים")};
+$("#sugList").onclick=e=>{const i=e.target.dataset.add;if(i==null)return;if(S.bands.length>=8){toast("עד 8 פסים");return}S.bands.push({...S.sugg[+i]});saveBands();toast("נוסף פס")};
+$("#buildList").onclick=e=>{const i=e.target.dataset.cut;if(i==null)return;const b=S.builds[+i];if(S.bands.length>=8){toast("עד 8 פסים");return}S.bands.push({type:"bell",f:Math.round(b.f),g:-+Math.min(12,b.ex).toFixed(1),q:+b.q.toFixed(2),on:true});selectBand(S.bands.length-1);saveBands()};
+$("#copyBtn").onclick=async()=>{
+ const lines=["Resona — הגדרות מאסטר","יעד: "+S.tgt.spl+" dB("+S.w+"), עקומה "+$("#curveSel").selectedOptions[0].text+", הטיה "+S.tgt.tilt+" dB/oct",
+  "שינוי גיין מאסטר: "+(S.masterGain>=0?"+":"")+(S.masterGain||0).toFixed(1)+" dB",""];
+ (S.bands.length?S.bands:S.sugg).forEach((b,i)=>lines.push(`${i+1}. ${typeName(b.type)}  ${b.f} Hz  ${hasGain(b.type)?(b.g>0?"+":"")+b.g.toFixed(1)+" dB  ":""}Q ${b.q.toFixed(2)}${b.on===false?"  (כבוי)":""}`));
+ const txt=lines.join("\n");
+ try{await navigator.clipboard.writeText(txt);toast("הועתק")}catch(err){showBanner("<pre style='white-space:pre-wrap;margin:0;font-family:var(--mono);direction:rtl'>"+txt.replace(/</g,"&lt;")+"</pre>")}
+};
+// positions & snapshots
+$("#posAdd").onclick=()=>{const src=S.avgMode==="inf"?pInf:pSlow;S.positions.push(Float64Array.from(src));$("#posCount").textContent=S.positions.length+" מיקומים";toast("מיקום "+S.positions.length+" נשמר")};
+$("#posClear").onclick=()=>{S.positions=[];$("#posCount").textContent="0 מיקומים"};
+$("#snapBtn").onclick=()=>{if(S.snaps.length>=2)S.snaps.shift();S.snaps.push({arr:Float64Array.from(disp)});$("#snapInfo").textContent=S.snaps.length+" תמונות (לבן = ראשונה, צהוב = שנייה)"};
+$("#snapClear").onclick=()=>{S.snaps=[];$("#snapInfo").textContent="אין תמונות"};
+$("#pinkBtn").onclick=togglePink;
+S.loadsDetail=LS.get("loadsDetail",false);segSel("#loadSeg","l",S.loadsDetail?"detail":"basic");
+$$("#loadSeg button").forEach(b=>b.onclick=()=>{S.loadsDetail=b.dataset.l==="detail";LS.set("loadsDetail",S.loadsDetail);segSel("#loadSeg","l",b.dataset.l);analyze()});
+function stopNoise(){if(!S.pink)return;try{S.pink.src.stop()}catch(e){}S.pink=null;$("#pinkBtn").textContent="נגן "+NOISE_INFO[S.noise][0]}
+function setNoise(n){S.noise=n;segSel("#noiseSeg","n",n);$("#noiseNote").textContent=NOISE_INFO[n][1];if(S.pink){stopNoise();togglePink()}else $("#pinkBtn").textContent="נגן "+NOISE_INFO[n][0]}
+$$("#noiseSeg button").forEach(b=>b.onclick=()=>setNoise(b.dataset.n));setNoise("pink");
+$("#pinkLvl").oninput=e=>{$("#pinkLvlV").textContent=e.target.value+" dBFS";if(S.pink)S.pink.g.gain.value=Math.pow(10,(+e.target.value+20)/20)};
+
+function showBanner(h){const b=$("#banner");b.innerHTML=h;b.hidden=false}
+function hideBanner(){$("#banner").hidden=true}
+let toastEl=null,toastT=0;
+function toast(t){if(!toastEl){toastEl=document.createElement("div");toastEl.style.cssText="position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#18202d;border:1px solid #32405a;color:#e7ecf3;padding:8px 14px;border-radius:8px;font-size:13px;z-index:20;transition:opacity .2s;pointer-events:none";document.body.appendChild(toastEl)}toastEl.textContent=t;toastEl.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.style.opacity=0,1800)}
+
+/* ---------- boot ---------- */
+if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener("devicechange",listDevices);
+S.profile="demo";$("#profSel").value="demo";
+alloc();onProfile();syncTgt();seedStatic();
+if(!S.bands.length){analyze();suggestEQ();S.bands=S.sugg.map(b=>({...b}));}
+setSourceUI();setStatus();resize();analyze();updateMeterUI();
+requestAnimationFrame(t=>{lastT=t;requestAnimationFrame(tick)});
+})();
+</script>
+
+<script>
+if("serviceWorker" in navigator&&location.protocol==="https:"){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}))}
+</script>
+</body>
+</html>
