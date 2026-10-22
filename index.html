@@ -2,7 +2,7 @@
 <html lang="he">
 <head>
 <meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
 <meta name="theme-color" content="#0b0f15">
 <meta name="description" content="Resona — מנתח RTA ומד SPL לכיוון מערכות הגברה בחלל">
 <meta name="apple-mobile-web-app-capable" content="yes">
@@ -29,6 +29,15 @@
   color-scheme:dark;
 }
 *{box-sizing:border-box}
+html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
+button,select,input,label,.tab,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
+#buildList{min-height:calc(6 * 50px)}
+.item.ghost{visibility:hidden}
+.item .acts{display:flex;gap:4px;align-items:center}
+.item.off{opacity:.5}
+.btn.added{border-color:var(--good);color:var(--good)}
+.subhead{display:flex;align-items:center;gap:8px;margin:14px 0 8px;font-size:13px;font-weight:600}
+.subhead small{font-weight:400;color:var(--muted);font-size:11px;margin-inline-start:auto}
 html,body{background:var(--bg);color:var(--fg)}
 body{font-family:var(--ui);font-size:14px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
@@ -366,6 +375,9 @@ canvas{display:block}
         <label class="note">הגברה מקס׳ <input type="number" id="maxBoost" value="3" min="0" max="9" step="0.5" style="width:58px;background:var(--bg);border:1px solid var(--line);border-radius:6px;padding:3px 6px" class="mono"> dB</label>
       </div>
       <div class="master"><span class="note">מאסטר:</span><span class="delta mono" id="mGain" dir="ltr">--</span><span class="note" id="mGainTxt"></span></div>
+      <div class="subhead">פסי EQ פעילים <small id="activeCount">0</small><button class="btn small" id="clearBands">נקה הכל</button></div>
+      <div class="list" id="activeList"></div>
+      <div class="subhead">הצעות לפי החדר</div>
       <div class="row" style="margin-bottom:8px">
         <button class="btn warm" id="suggestBtn">חשב EQ מוצע</button>
         <button class="btn" id="applyBtn">החל על הגרף</button>
@@ -382,7 +394,7 @@ canvas{display:block}
         <button data-l="detail" aria-pressed="false">מפורט · 11 תחומים</button>
       </div>
       <div class="loads" id="loads"></div>
-      <h2 style="margin-top:16px">הצטברויות ותהודות <small id="buildCount">0</small></h2>
+      <h2 style="margin-top:16px">הצטברויות ותהודות <small id="buildCount">0</small><button class="btn small" id="buildLock" aria-pressed="false">נעל רשימה</button></h2>
       <div class="list" id="buildList"></div>
     </div>
 
@@ -754,8 +766,8 @@ function renderSugg(){
  L.innerHTML=S.sugg.map((b,i)=>`<div class="item"><span class="swatch" style="background:${BAND_COLORS[i%8]}"></span>
   <div><div class="t" dir="ltr" style="text-align:right">${typeName(b.type)} · ${fmtF(b.f)}Hz · ${b.g>0?"+":""}${b.g.toFixed(1)} dB · Q ${b.q.toFixed(2)}</div>
   <div class="s">${b.g<0?(b.f<300?"חיתוך הצטברות נמוכה":"חיתוך עודף"):"השלמה עדינה"} · ${noteOf(b.f)}</div></div>
-  <button class="btn small" data-add="${i}">הוסף</button></div>`).join("")+
-  (S.skipped||[]).map(s=>`<div class="item" style="opacity:.75"><span class="badge">×</span><div><div class="t" dir="ltr" style="text-align:right">${fmtF(s.f)}Hz · ${s.dev.toFixed(1)} dB</div><div class="s">שקע צר — כנראה ביטול חדר. נסה להזיז רמקול/סאב, לא EQ.</div></div><span></span></div>`).join("");
+  ${(()=>{const k=S.bands.findIndex(x=>x.type===b.type&&x.f===b.f);return k>=0?`<button class="btn small added" data-rm="${k}">נוסף ✓ · הסר</button>`:`<button class="btn small" data-add="${i}">הוסף</button>`})()}</div>`).join("")+
+  ((S.skipped||[]).length?`<div class="note" style="padding:6px 2px">שקעים צרים שלא מתוקנים (כנראה ביטולי חדר — הזזת רמקול/סאב עדיפה על EQ): <span class="mono" dir="ltr">${S.skipped.slice().sort((a,b)=>a.f-b.f).map(s=>fmtF(s.f)+"Hz").join(" · ")}</span></div>`:"");
 }
 const typeName=t=>({bell:"Bell",lowshelf:"Low Shelf",highshelf:"High Shelf",highpass:"Low Cut",lowpass:"High Cut",notch:"Notch"})[t]||t;
 
@@ -777,7 +789,10 @@ function renderLoads(src){
    <span class="v mono" style="color:${col}">${d>=0?"+":""}${d.toFixed(1)}</span></div>`}).join("")+
   `<div class="note" style="margin-top:2px">dB = הפרש מהיעד אחרי תיקון רמת המאסטר · % = חלק מהאנרגיה הכוללת</div>`;
 }
+S.bTrack=[];S.bId=0;S.bTick=0;S.bLock=false;
 function detectBuildups(){
+ if(S.bLock)return;
+ if((S.bTick++)%4!==0)return;           // re-detect every ~2 s, not every frame of analysis
  const p=prof(),list=[];
  for(let i=2;i<NP-2;i++){
   const f=fpts[i];if(f<Math.max(25,p.range[0])||f>Math.min(10000,p.range[1]))continue;
@@ -785,16 +800,34 @@ function detectBuildups(){
   if(ex>3.5&&ana12[i]>=ana12[i-1]&&ana12[i]>=ana12[i+1]&&ana12[i]>=ana12[i-2]&&ana12[i]>=ana12[i+2]){
    let a=i,b=i;while(a>0&&ana12[a-1]>ana12[i]-3)a--;while(b<NP-1&&ana12[b+1]>ana12[i]-3)b++;
    const bw=Math.max(.06,Math.log2(fpts[b]/fpts[a]));
-   list.push({f,ex,q:clamp(Math.sqrt(Math.pow(2,bw))/(Math.pow(2,bw)-1),1,12),i,kind:f<300?"מוד חדר":f<1500?"תהודה":"בליטה"});
+   list.push({f,ex,q:clamp(Math.sqrt(Math.pow(2,bw))/(Math.pow(2,bw)-1),1,12),i});
   }
  }
- list.sort((a,b)=>b.ex-a.ex);
- const merged=[];for(const x of list){if(!merged.some(m=>Math.abs(Math.log2(m.f/x.f))<1/6))merged.push(x);if(merged.length>=6)break}
- S.builds=merged.sort((a,b)=>a.f-b.f);
+ // hysteresis: an item must show up twice to appear, and be missing 3 times to disappear
+ for(const t of S.bTrack)t.seen=false;
+ for(const c of list){
+  const t=S.bTrack.find(t=>Math.abs(Math.log2(t.f/c.f))<1/6);
+  if(t){t.seen=true;t.hits++;t.miss=0;t.ex+=.35*(c.ex-t.ex);t.q+=.35*(c.q-t.q);if(Math.abs(Math.log2(t.f/c.f))>1/24){t.f=c.f;t.i=c.i}}
+  else S.bTrack.push({id:++S.bId,f:c.f,i:c.i,ex:c.ex,q:c.q,hits:1,miss:0,seen:true});
+ }
+ for(const t of S.bTrack)if(!t.seen)t.miss++;
+ S.bTrack=S.bTrack.filter(t=>t.miss<3);
+ const shown=S.bTrack.filter(t=>t.hits>=2).sort((a,b)=>b.ex-a.ex).slice(0,6).sort((a,b)=>a.f-b.f);
+ shown.forEach(t=>t.kind=t.f<300?"מוד חדר":t.f<1500?"תהודה":"בליטה");
+ S.builds=shown;renderBuilds();
+}
+function renderBuilds(){
+ const L=$("#buildList"),key=S.builds.map(b=>b.id).join(",");
  $("#buildCount").textContent=S.builds.length?S.builds.length+" זוהו":"אין";
- $("#buildList").innerHTML=S.builds.length?S.builds.map((b,i)=>`<div class="item"><span class="badge mono" style="color:${b.ex>6?"var(--bad)":"var(--warn)"}">+${b.ex.toFixed(1)}</span>
-  <div><div class="t" dir="ltr" style="text-align:right">${fmtF(b.f)} Hz · ${noteOf(b.f)} · Q≈${b.q.toFixed(1)}</div><div class="s">${b.kind}</div></div>
-  <button class="btn small" data-cut="${i}">חתוך</button></div>`).join(""):'<div class="empty">לא זוהו הצטברויות חריגות.</div>';
+ if(L.dataset.key!==key){
+  L.dataset.key=key;
+  L.innerHTML=(S.builds.length?S.builds.map((b,i)=>`<div class="item" data-id="${b.id}"><span class="badge mono"></span>
+   <div><div class="t" dir="ltr" style="text-align:right"></div><div class="s">${b.kind}</div></div>
+   <button class="btn small" data-cut="${b.id}">חתוך</button></div>`).join(""):'<div class="empty">לא זוהו הצטברויות חריגות.</div>');
+ }
+ S.builds.forEach(b=>{const r=L.querySelector(`[data-id="${b.id}"]`);if(!r)return;const bd=r.querySelector(".badge");
+  bd.textContent="+"+b.ex.toFixed(1);bd.style.color=b.ex>6?"var(--bad)":"var(--warn)";
+  r.querySelector(".t").textContent=`${fmtF(b.f)} Hz · ${noteOf(b.f)} · Q≈${b.q.toFixed(1)}`});
 }
 function renderReliability(){
  const p=prof(),checks=[];
@@ -814,7 +847,7 @@ function renderReliability(){
  checks.push([p.range[0]<=40&&p.range[1]>=16000?"ok":"warn","טווח אמין: "+fmtF(p.range[0])+"–"+fmtF(p.range[1])+" Hz (מחוץ לו האזור מוצל בגרף)."]);
  const sc={ok:1,warn:.5,bad:0},score=Math.round(100*checks.reduce((s,c)=>s+sc[c[0]],0)/checks.length);
  $("#relV").textContent=score+"%";$("#relBar").style.width=score+"%";
- $("#checks").innerHTML=checks.map(([s,t])=>`<li><span class="st ${s}">${s==="ok"?"✓":s==="warn"?"!":"×"}</span><span>${t}</span></li>`).join("");
+ const html=checks.map(([s,t])=>`<li><span class="st ${s}">${s==="ok"?"✓":s==="warn"?"!":"×"}</span><span>${t}</span></li>`).join("");if($("#checks").dataset.h!==html){$("#checks").dataset.h=html;$("#checks").innerHTML=html}
 }
 
 /* ---------- meter UI ---------- */
@@ -1159,7 +1192,7 @@ cv.addEventListener("pointerleave",()=>{if(drag<0)hov=null});
 cv.addEventListener("dblclick",e=>e.preventDefault());
 cv.addEventListener("wheel",e=>{const j=S.sel>=0?S.sel:hitNode(pos(e));if(j<0)return;e.preventDefault();const b=S.bands[j];b.q=+clamp(b.q*Math.pow(1.1,e.deltaY>0?-1:1),.3,20).toFixed(2);fillNodebar();saveBands()},{passive:false});
 function addBandAt(p){if(S.bands.length>=8){toast("עד 8 פסים");return}const f=Math.round(clamp(fOf(p.x),20,20000));const g=+clamp(gOfY(p.y),-18,18).toFixed(1);S.bands.push({type:"bell",f,g,q:1.4,on:true});selectBand(S.bands.length-1);saveBands()}
-function selectBand(j){S.sel=j;fillNodebar()}
+function selectBand(j){S.sel=j;fillNodebar();queueActive()}
 const qToR=q=>Math.log(q/.3)/Math.log(20/.3),rToQ=r=>.3*Math.pow(20/.3,r);
 function fillNodebar(){
  const nb=$("#nodebar");if(S.sel<0||!S.bands[S.sel]){nb.hidden=true;return}nb.hidden=false;const b=S.bands[S.sel];
@@ -1167,7 +1200,24 @@ function fillNodebar(){
  $("#nbType").value=b.type;if(document.activeElement!==$("#nbF"))$("#nbF").value=b.f;if(document.activeElement!==$("#nbG"))$("#nbG").value=b.g;$("#nbG").disabled=!hasGain(b.type);
  $("#nbQ").value=qToR(b.q);$("#nbQv").textContent=b.q.toFixed(2);$("#nbOn").checked=b.on;
 }
-function saveBands(){LS.set("bands",S.bands)}
+function saveBands(){LS.set("bands",S.bands);queueActive()}
+let activeQ=0;function queueActive(){if(activeQ)return;activeQ=requestAnimationFrame(()=>{activeQ=0;renderActive();renderSugg()})}
+function renderActive(){
+ const L=$("#activeList");$("#activeCount").textContent=S.bands.length+" / 8";$("#clearBands").hidden=!S.bands.length;
+ if(!S.bands.length){L.innerHTML='<div class="empty">אין פסים פעילים. הוסף מההצעות, מההצטברויות או בלחיצה כפולה על הגרף.</div>';return}
+ L.innerHTML=S.bands.map((b,i)=>`<div class="item${b.on?"":" off"}${i===S.sel?" sel":""}" style="${i===S.sel?"border-color:"+BAND_COLORS[i%8]:""}">
+  <span class="swatch" style="background:${BAND_COLORS[i%8]}"></span>
+  <div><div class="t" dir="ltr" style="text-align:right">${i+1}. ${typeName(b.type)} · ${fmtF(b.f)}Hz${hasGain(b.type)?" · "+(b.g>0?"+":"")+b.g.toFixed(1)+" dB":""} · Q ${b.q.toFixed(2)}</div>
+  <div class="s">${b.on?"פעיל":"כבוי"} · ${noteOf(b.f)}</div></div>
+  <div class="acts"><button class="btn small" data-act="tog" data-i="${i}">${b.on?"כבה":"הפעל"}</button><button class="btn small" data-act="edit" data-i="${i}">ערוך</button><button class="btn small" data-act="del" data-i="${i}" aria-label="מחק">✕</button></div></div>`).join("");
+}
+$("#activeList").onclick=e=>{const btn=e.target.closest("button");if(!btn)return;const i=+btn.dataset.i,b=S.bands[i];if(!b)return;
+ if(btn.dataset.act==="tog"){b.on=!b.on;fillNodebar()}
+ else if(btn.dataset.act==="del"){S.bands.splice(i,1);if(S.sel===i)S.sel=-1;else if(S.sel>i)S.sel--;fillNodebar()}
+ else if(btn.dataset.act==="edit"){setView("spectrum");if(!$("#tEq").checked)$("#tEq").checked=true;selectBand(i);$(".stage").scrollIntoView({behavior:"smooth",block:"start"});toast("גרור את הנקודה או שנה ערכים בסרגל שמתחת לגרף")}
+ saveBands()};
+$("#clearBands").onclick=e=>{const btn=e.target;if(btn.dataset.armed){S.bands=[];S.sel=-1;fillNodebar();saveBands();delete btn.dataset.armed;btn.textContent="נקה הכל";return}
+ btn.dataset.armed=1;btn.textContent="לחץ שוב לאישור";setTimeout(()=>{delete btn.dataset.armed;btn.textContent="נקה הכל"},2500)};
 $("#nbType").onchange=e=>{const b=S.bands[S.sel];b.type=e.target.value;if(!hasGain(b.type))b.g=0;if(/shelf|pass/.test(b.type))b.q=.71;fillNodebar();saveBands()};
 $("#nbF").oninput=e=>{const v=+e.target.value;if(v>=20&&v<=20000){S.bands[S.sel].f=v;saveBands()}};
 $("#nbG").oninput=e=>{const v=+e.target.value;if(isFinite(v)){S.bands[S.sel].g=clamp(v,-24,24);saveBands()}};
@@ -1231,8 +1281,8 @@ $("#curveSel").onchange=e=>{S.tgt.curve=e.target.value;syncTgt()};
 $("#tilt").oninput=e=>{S.tgt.tilt=+e.target.value;syncTgt()};
 $("#suggestBtn").onclick=()=>{analyze();suggestEQ()};
 $("#applyBtn").onclick=()=>{if(!S.sugg.length){analyze();suggestEQ()}if(!S.sugg.length)return;S.bands=S.sugg.map(b=>({...b}));S.sel=-1;fillNodebar();saveBands();toast("הוחלו "+S.bands.length+" פסים")};
-$("#sugList").onclick=e=>{const i=e.target.dataset.add;if(i==null)return;if(S.bands.length>=8){toast("עד 8 פסים");return}S.bands.push({...S.sugg[+i]});saveBands();toast("נוסף פס")};
-$("#buildList").onclick=e=>{const i=e.target.dataset.cut;if(i==null)return;const b=S.builds[+i];if(S.bands.length>=8){toast("עד 8 פסים");return}S.bands.push({type:"bell",f:Math.round(b.f),g:-+Math.min(12,b.ex).toFixed(1),q:+b.q.toFixed(2),on:true});selectBand(S.bands.length-1);saveBands()};
+$("#sugList").onclick=e=>{const rm=e.target.dataset.rm;if(rm!=null){S.bands.splice(+rm,1);S.sel=-1;fillNodebar();saveBands();return}const i=e.target.dataset.add;if(i==null)return;if(S.bands.length>=8){toast("עד 8 פסים");return}S.bands.push({...S.sugg[+i]});saveBands();toast("נוסף פס")};
+$("#buildList").onclick=e=>{const id=e.target.dataset.cut;if(id==null)return;const b=S.builds.find(x=>x.id==id);if(!b)return;if(S.bands.length>=8){toast("עד 8 פסים");return}S.bands.push({type:"bell",f:Math.round(b.f),g:-+Math.min(12,b.ex).toFixed(1),q:+b.q.toFixed(2),on:true});selectBand(S.bands.length-1);saveBands()};
 $("#copyBtn").onclick=async()=>{
  const lines=["Resona — הגדרות מאסטר","יעד: "+S.tgt.spl+" dB("+S.w+"), עקומה "+$("#curveSel").selectedOptions[0].text+", הטיה "+S.tgt.tilt+" dB/oct",
   "שינוי גיין מאסטר: "+(S.masterGain>=0?"+":"")+(S.masterGain||0).toFixed(1)+" dB",""];
@@ -1246,6 +1296,7 @@ $("#posClear").onclick=()=>{S.positions=[];$("#posCount").textContent="0 מיק�
 $("#snapBtn").onclick=()=>{if(S.snaps.length>=2)S.snaps.shift();S.snaps.push({arr:Float64Array.from(disp)});$("#snapInfo").textContent=S.snaps.length+" תמונות (לבן = ראשונה, צהוב = שנייה)"};
 $("#snapClear").onclick=()=>{S.snaps=[];$("#snapInfo").textContent="אין תמונות"};
 $("#pinkBtn").onclick=togglePink;
+$("#buildLock").onclick=e=>{S.bLock=!S.bLock;e.target.setAttribute("aria-pressed",S.bLock);e.target.textContent=S.bLock?"נעול · שחרר":"נעל רשימה";e.target.style.borderColor=S.bLock?"var(--eq)":""};
 S.loadsDetail=LS.get("loadsDetail",false);segSel("#loadSeg","l",S.loadsDetail?"detail":"basic");
 $$("#loadSeg button").forEach(b=>b.onclick=()=>{S.loadsDetail=b.dataset.l==="detail";LS.set("loadsDetail",S.loadsDetail);segSel("#loadSeg","l",b.dataset.l);analyze()});
 function stopNoise(){if(!S.pink)return;try{S.pink.src.stop()}catch(e){}S.pink=null;$("#pinkBtn").textContent="נגן "+NOISE_INFO[S.noise][0]}
@@ -1280,12 +1331,18 @@ document.addEventListener("visibilitychange",()=>document.hidden?onHide():onShow
 window.addEventListener("pagehide",onHide);
 window.addEventListener("pageshow",e=>{if(e.persisted)onShow()});
 
+/* ---------- no page zoom: double-tap and pinch belong to the app ---------- */
+try{const vm=document.querySelector('meta[name="viewport"]');if(vm&&!/maximum-scale/.test(vm.content))vm.content+=",maximum-scale=1,user-scalable=no"}catch(e){}
+["gesturestart","gesturechange","gestureend"].forEach(ev=>document.addEventListener(ev,e=>e.preventDefault(),{passive:false}));
+document.addEventListener("touchmove",e=>{if(e.touches.length>1)e.preventDefault()},{passive:false});
+document.addEventListener("dblclick",e=>e.preventDefault(),{passive:false});
+
 /* ---------- boot ---------- */
 if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.mediaDevices.addEventListener("devicechange",listDevices);
 if(S.profile==="demo")S.profile=/android/i.test(navigator.userAgent)?"android":"iphone";$("#profSel").value=S.profile;
 alloc();onProfile();syncTgt();seedStatic();
 
-setSourceUI();setStatus();resize();analyze();updateMeterUI();
+setSourceUI();setStatus();resize();analyze();updateMeterUI();renderActive();
 requestAnimationFrame(t=>{lastT=t;requestAnimationFrame(tick)});
 })();
 </script>
