@@ -31,6 +31,8 @@
 }
 *{box-sizing:border-box}
 label.btn{cursor:pointer;display:inline-flex}
+.rawin{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--muted);text-align:center}
+.rawin.bad{color:var(--bad)}
 /* centered pill titles */
 .ttl,h2.ttl{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 12px;font-size:inherit;font-weight:inherit}
 .ttl small,h2.ttl small{margin:0!important;font-size:11px;color:var(--muted);font-weight:400}
@@ -354,6 +356,7 @@ canvas{display:block}
         <div class="stat"><div class="lbl">Max</div><div class="v" id="stMax">--.-</div></div>
         <div class="stat"><div class="lbl">Peak</div><div class="v" id="stPeak">--.-</div></div>
       </div>
+      <div class="rawin" id="rawIn" dir="rtl">כניסה גולמית: <span class="mono" dir="ltr">-- dBFS</span></div>
     </div>
     <div class="card">
       <div class="ttl"><span class="pillt">עוצמת יעד</span></div>
@@ -624,7 +627,7 @@ function prof(){return profById(S.profile)}
 function offset(){const o=S.offsets[S.profile];return o!=null?o:prof().sens}
 function buildCorr(){
  const p=prof();corr=new Float64Array(NB);wBin=new Float64Array(NB);
- for(let k=0;k<NB;k++){const f=Math.max(k*binHz,1);corr[k]=Math.pow(10,-interpLog(p.curve,Math.max(f,10))/10);wBin[k]=k===0?0:Math.pow(10,wDb(S.w,f)/10)}
+ for(let k=0;k<NB;k++){const f=Math.max(k*binHz,1);corr[k]=Math.pow(10,-Math.max(-6,interpLog(p.curve,Math.max(f,10)))/10);wBin[k]=k===0?0:Math.pow(10,wDb(S.w,f)/10)}
  for(let i=0;i<NP;i++)wArr[i]=Math.pow(10,wDb(S.w,fpts[i])/10);
 }
 
@@ -778,6 +781,7 @@ function tick(now){
    pFast[k]+=aF*(p-pFast[k]);pSlow[k]+=aS*(p-pSlow[k]);pInf[k]+=(p-pInf[k])/infN;tot+=p*wBin[k]}
   S.levelF+=aF*(tot-S.levelF);S.levelS+=aS*(tot-S.levelS);S.leqE+=tot*dt;S.leqT+=dt;
   let pk=0;for(let i=tbuf.length-4096;i<tbuf.length;i++){const a=Math.abs(tbuf[i]);if(a>pk)pk=a}
+  let ss=0;for(let i=tbuf.length-4096;i<tbuf.length;i++)ss+=tbuf[i]*tbuf[i];S.rmsFS=(S.rmsFS==null?-120:S.rmsFS)+aF*(10*Math.log10(ss/4096+1e-24)-(S.rmsFS==null?-120:S.rmsFS));
   const pkDb=20*Math.log10(pk+1e-12)+off;S.peak=Math.max(pkDb,S.peak-dt*8);S.pkFS=20*Math.log10(pk+1e-12);S.pkWin=Math.max(S.pkWin==null?-300:S.pkWin,S.pkFS);
   const L=db10(S.tw==="S"?S.levelS:S.levelF)+K_FS+off;if(S.leqT>1)S.lmax=Math.max(S.lmax,L);
   if(now-S.lastHist>100){S.lastHist=now;S.hist.push(db10(S.levelF)+K_FS+off);if(S.hist.length>600)S.hist.shift()}
@@ -919,7 +923,7 @@ function renderReliability(){
  const pq={"מדויק עם כיול":S.custom&&S.profile==="custom"?"ok":"warn","מותאם":"ok","מקורב":"warn","גס":"bad","וירטואלי":"ok"}[p.q]||"warn";
  checks.push([S.profile==="custom"?"ok":pq,S.profile==="custom"?"עקומת כיול אישית נטענה.":p.q==="מדויק עם כיול"?"מיקרופון מדידה — טען קובץ כיול אישי לדיוק מלא.":"פרופיל "+p.q+" — סטייה צפויה של ±2–4 dB בקצוות."]);
  const cm=S.calMeta[S.profile];
- checks.push(S.profile==="demo"?["ok","כיול וירטואלי."]:cm?["ok","כויל "+(cm.mode==="calib"?"מול קלברטור":"מול מד ייחוס")+" · "+new Date(cm.t).toLocaleDateString("he-IL")]:["warn","הרמה לא כוילה — הקריאה מבוססת על רגישות טיפוסית."]);
+ checks.push(!offsetSane()?["bad","כיול שמור חריג (מעל 20 dB מהרגישות הטיפוסית) — כנראה שגוי. אפס אותו בתיבת כיול רמה."]:S.profile==="demo"?["ok","כיול וירטואלי."]:cm?["ok","כויל "+(cm.mode==="calib"?"מול קלברטור":"מול מד ייחוס")+" · "+new Date(cm.t).toLocaleDateString("he-IL")]:["warn","הרמה לא כוילה — הקריאה מבוססת על רגישות טיפוסית."]);
  const pk=S.pkFS;
  if(S.running){
   if(pk!=null&&pk>-1)checks.push(["bad","קליפינג בכניסה — הורד גיין."]);
@@ -934,6 +938,8 @@ function renderReliability(){
 
 /* ---------- meter UI ---------- */
 function updateMeterUI(){
+ {const r=$("#rawIn");if(S.running&&S.rmsFS!=null){const pk=S.pkShow!=null?S.pkShow:-120;r.innerHTML=`כניסה גולמית: <span class="mono" dir="ltr">RMS ${S.rmsFS.toFixed(1)} · Peak ${pk.toFixed(1)} dBFS</span> · 0 dBFS = <span class="mono">${offset().toFixed(0)}</span> dB SPL`;r.classList.toggle("bad",pk>-1)}
+  else r.innerHTML='כניסה גולמית: <span class="mono" dir="ltr">-- dBFS</span>'}
  const pkw=S.pkWin;S.pkWin=null;if(pkw!=null)S.pkShow=pkw;
  if(S.running&&S.source==="mic"&&pkw!=null){const lv=pkw;$("#srcLabel").textContent="מיקרופון · "+(lv<-120?"אין אות":lv.toFixed(0)+" dBFS");
   if(lv<-90){S.silentT=(S.silentT||0)+1;if(S.silentT===8)showBanner("המיקרופון פתוח אבל לא מגיע ממנו אות. בדוק שנבחר ההתקן הנכון, שלא מושתק, ושאין אפליקציה אחרת שמשתמשת בו.")}else S.silentT=0}
@@ -1147,9 +1153,13 @@ function drawImmersive(dt){
  cx.font="10.5px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.textAlign="center";cx.textBaseline="top";
  for(const f of LAB_F){const x=Math.round(xOf(f))+.5;cx.strokeStyle="rgba(140,160,190,.07)";cx.beginPath();cx.moveTo(x,PAD.t);cx.lineTo(x,base);cx.stroke();cx.fillStyle="rgba(140,160,190,.45)";cx.fillText(fmtF(f),clamp(x,PAD.l+10,W-PAD.r-10),base+8)}
  // trails
- if(S.running&&!S.frozen&&++IM.tick%3===0){IM.trails.push(Float64Array.from(IM.sm));if(IM.trails.length>14)IM.trails.shift()}
- if(IM.trail)IM.trails.forEach((a,j)=>{cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(a[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}cx.strokeStyle=hGrad(.03+.10*j/IM.trails.length);cx.lineWidth=1;cx.stroke()});
+ if(S.running&&!S.frozen&&++IM.tick%6===0){IM.trails.push(Float64Array.from(IM.sm));if(IM.trails.length>36)IM.trails.shift()}
+ if(!IM.peak||IM.peak.length!==NP)IM.peak=Float64Array.from(IM.sm);
+ if(!S.frozen)for(let i=0;i<NP;i++)IM.peak[i]=Math.max(IM.sm[i],IM.peak[i]-dt*1.5);
+ if(IM.trail)IM.trails.forEach((a,j)=>{cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(a[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}cx.strokeStyle=hGrad(.02+.16*Math.pow(j/IM.trails.length,1.6));cx.lineWidth=1;cx.stroke()});
  // body
+ if(IM.trail){cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(IM.peak[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}
+  cx.save();cx.shadowColor="rgba(255,255,255,.25)";cx.shadowBlur=6;cx.strokeStyle=hGrad(.55);cx.lineWidth=1.2;cx.setLineDash([2,3]);cx.stroke();cx.restore()}
  const body=()=>{cx.beginPath();cx.moveTo(PAD.l,base);for(let i=0;i<NP;i++)cx.lineTo(xOf(fpts[i]),Math.min(base,y(IM.sm[i])));cx.lineTo(W-PAD.r,base);cx.closePath()};
  body();cx.fillStyle=hGrad(.30);cx.fill();
  const vf=cx.createLinearGradient(0,PAD.t,0,base);vf.addColorStop(0,"rgba(5,7,11,0)");vf.addColorStop(1,"rgba(5,7,11,.55)");cx.fillStyle=vf;cx.fill();
@@ -1178,7 +1188,7 @@ function drawImmersive(dt){
 function enterImm(){
  S.imm=true;const st=$(".stage");st.classList.add("imm");Object.assign(PAD,{l:18,r:18,t:110,b:0});
  if(!["spectrum","sgram","bars"].includes(S.view))setView("spectrum");
- IM.trails=[];IM.sm.set(live);syncImmBtns();poke();
+ IM.trails=[];IM.peak=null;IM.sm.set(live);syncImmBtns();poke();
  const lock=()=>{try{if(IM.landscape&&screen.orientation&&screen.orientation.lock)return screen.orientation.lock("landscape").catch(()=>{})}catch(e){}};
  try{const r=st.requestFullscreen||st.webkitRequestFullscreen;if(r)Promise.resolve(r.call(st)).then(lock,()=>{}).finally(()=>setTimeout(layoutImm,250))}catch(e){}
  try{navigator.wakeLock&&navigator.wakeLock.request("screen").then(w=>IM.wake=w).catch(()=>{})}catch(e){}
@@ -1204,7 +1214,7 @@ function syncImmBtns(){$$(".hud-ctl [data-iv]").forEach(b=>b.setAttribute("aria-
 function poke(){$(".stage").classList.remove("idle");clearTimeout(IM.idleT);IM.idleT=setTimeout(()=>{if(S.imm)$(".stage").classList.add("idle")},3000)}
 $("#immBtn").onclick=enterImm;$("#hExit").onclick=exitImm;
 $$(".hud-ctl [data-iv]").forEach(b=>b.onclick=()=>{setView(b.dataset.iv);syncImmBtns()});
-$("#hEar").onclick=()=>{IM.ear=!IM.ear;IM.trails=[];syncImmBtns()};
+$("#hEar").onclick=()=>{IM.ear=!IM.ear;IM.trails=[];IM.peak=null;syncImmBtns()};
 $("#hTrail").onclick=()=>{IM.trail=!IM.trail;syncImmBtns()};
 $("#hTgt").onclick=()=>{IM.tgt=!IM.tgt;syncImmBtns()};
 $("#hRot").onclick=()=>{IM.landscape=!IM.landscape;try{IM.landscape?screen.orientation.lock("landscape").catch(()=>{}):screen.orientation.unlock()}catch(e){}syncImmBtns();layoutImm()};
@@ -1335,7 +1345,7 @@ $("#profSel").innerHTML=PROFILES.map(p=>`<option value="${p.id}">${p.name}</opti
 function onProfile(){LS.set("profile",S.profile);const p=prof();$("#profNote").textContent=p.note;$("#profQ").textContent=p.q;
  $("#offInfo").textContent="היסט: 0 dBFS = "+offset().toFixed(1)+" dB SPL"+(S.offsets[S.profile]!=null?" (מכויל)":" (טיפוסי)");
  if(fbuf)buildCorr();$("#calInfo").textContent=S.profile==="custom"&&S.custom?S.custom.info:"";}
-$("#profSel").onchange=e=>{S.profile=e.target.value;onProfile()};
+$("#profSel").onchange=e=>{S.profile=e.target.value;onProfile();checkOffset()};
 $("#calFile").onchange=async e=>{const f=e.target.files[0];if(!f)return;$("#calName").textContent=f.name;const txt=await f.text();const pts=[];let sens=null;
  for(const line of txt.split(/\r?\n/)){const m=line.match(/Sens\s*Factor\s*=\s*(-?[\d.]+)/i);if(m)sens=+m[1];const n=line.match(/^\s*(\d+(?:\.\d+)?)[\s,;]+(-?\d+(?:\.\d+)?)/);if(n){const fr=+n[1],d=+n[2];if(fr>=5&&fr<=40000&&isFinite(d))pts.push([fr,d])}}
  if(pts.length<5){showBanner("לא נמצאו נקודות כיול בקובץ. הפורמט הצפוי: שורות של תדר ו־dB (למשל 1000 0.12).");return}
@@ -1351,6 +1361,8 @@ $("#calGo").onclick=()=>{
  const iv=setInterval(()=>{e+=S.levelF;t++;const left=3-(performance.now()-st)/1000;$("#calStatus").textContent="מודד… "+Math.max(0,left).toFixed(1);
   if(left<=0){clearInterval(iv);$("#calGo").disabled=false;const meas=db10(e/t)+K_FS+offset();const ref=+$("#calRef").value;
    if(!isFinite(meas)||e<=0){$("#calStatus").textContent="אין אות.";return}
+   const corrDb=ref-meas,newOff=offset()+corrDb;
+   if(Math.abs(newOff-prof().sens)>20){$("#calStatus").textContent="";showBanner(`הכיול בוטל: הוא היה משנה את הרגישות ב־${corrDb>0?"+":""}${corrDb.toFixed(1)} dB, הרבה מעבר לסביר למיקרופון הזה. המכשיר מדד ${meas.toFixed(1)} dB בזמן שהוזן ${ref} dB. בדוק שהקלברטור צמוד למיקרופון ופועל, או שהמספר שהזנת הוא מה שמראה מד הייחוס באותו רגע.`);return}
    S.offsets[S.profile]=offset()+(ref-meas);S.calMeta[S.profile]={mode:calMode,t:Date.now()};LS.set("offsets",S.offsets);LS.set("calMeta",S.calMeta);
    $("#calStatus").textContent="תוקן ב־"+(ref-meas>=0?"+":"")+(ref-meas).toFixed(1)+" dB";onProfile();resetMeters()}},100);
 };
@@ -1395,6 +1407,11 @@ function hideBanner(){$("#banner").hidden=true}
 let toastEl=null,toastT=0;
 function toast(t){if(!toastEl){toastEl=document.createElement("div");toastEl.style.cssText="position:fixed;bottom:calc(16px + env(safe-area-inset-bottom,0px));left:50%;transform:translateX(-50%);background:#18202d;border:1px solid #32405a;color:#e7ecf3;padding:8px 14px;border-radius:8px;font-size:13px;z-index:20;transition:opacity .2s;pointer-events:none";document.body.appendChild(toastEl)}toastEl.textContent=t;toastEl.style.opacity=1;clearTimeout(toastT);toastT=setTimeout(()=>toastEl.style.opacity=0,1800)}
 
+function offsetSane(){const o=S.offsets[S.profile];return o==null||S.profile==="custom"||Math.abs(o-prof().sens)<=20}
+function checkOffset(){if(offsetSane())return;const o=S.offsets[S.profile],d=o-prof().sens;
+ showBanner(`נמצא כיול שמור שמזיז את הקריאה ב־${d>0?"+":""}${d.toFixed(0)} dB לעומת הרגישות הטיפוסית של ${prof().name}. זו כנראה הסיבה לקריאות לא הגיוניות (למשל 130 dB בדיבור). <button class="btn small warm" id="fixOff">אפס את הכיול</button>`);
+ const b=document.getElementById("fixOff");if(b)b.onclick=()=>{$("#calReset").click();hideBanner();toast("הכיול אופס לרגישות טיפוסית")}}
+
 /* ---------- background behaviour ---------- */
 S.bg=LS.get("bg","stop");S.autoResume=LS.get("autoResume",true);
 const BG_NOTE={stop:"המיקרופון נסגר ברגע שעוברים לאפליקציה אחרת או נועלים את המסך, וסימן המיקרופון של המערכת נעלם.",
@@ -1429,7 +1446,7 @@ if(navigator.mediaDevices&&navigator.mediaDevices.addEventListener)navigator.med
 if(S.profile==="demo")S.profile=/android/i.test(navigator.userAgent)?"android":"iphone";$("#profSel").value=S.profile;
 alloc();onProfile();syncTgt();seedStatic();
 
-setSourceUI();setStatus();resize();analyze();updateMeterUI();renderActive();
+setSourceUI();setStatus();resize();analyze();updateMeterUI();renderActive();checkOffset();
 requestAnimationFrame(t=>{lastT=t;requestAnimationFrame(tick)});
 })();
 </script>
