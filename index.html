@@ -14,6 +14,7 @@
 <link rel="apple-touch-icon" href="icons/icon-180.png">
 <style>:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}body{margin:0}img{max-width:100%}[hidden]{display:none!important}</style>
 <title>Resona Room Analyzer</title>
+<meta name="color-scheme" content="dark">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans+Hebrew:wght@400;500;600;700&display=swap">
 <style>
@@ -30,6 +31,64 @@
 }
 *{box-sizing:border-box}
 label.btn{cursor:pointer;display:inline-flex}
+/* centered pill titles */
+.ttl,h2.ttl{display:flex;flex-direction:column;align-items:center;gap:4px;margin:0 0 12px;font-size:inherit;font-weight:inherit}
+.ttl small,h2.ttl small{margin:0!important;font-size:11px;color:var(--muted);font-weight:400}
+.pillt{display:inline-block;padding:4px 14px;border-radius:99px;background:#1f2a3b;border:1px solid #344560;color:#eef3fa;font-size:12px;font-weight:600;letter-spacing:.03em;box-shadow:inset 0 1px 0 rgba(255,255,255,.05)}
+.pillt.en{font-family:var(--mono);text-transform:uppercase;letter-spacing:.14em;font-size:11.5px;color:#cfe9ff;border-color:#2b5f8f;background:linear-gradient(180deg,#183049,#132235)}
+.stagehead{display:flex;justify-content:center;padding:10px 10px 0;background:var(--panel2)}
+.stage.imm .stagehead{display:none}
+.stagebar{justify-content:center}
+.spl{justify-content:center}
+.meter .card .stats{text-align:center}
+/* collapsible bar */
+.fold{margin-top:14px;border:1px solid var(--line2);border-radius:10px;background:var(--panel2);overflow:hidden}
+.fold summary{list-style:none;display:flex;align-items:center;gap:8px;padding:9px 12px;cursor:pointer;font-weight:600;font-size:13px;user-select:none}
+.fold summary::-webkit-details-marker{display:none}
+.fold summary small{color:var(--muted);font-weight:400;font-size:11px;margin-inline-start:auto}
+.fold .chev{width:8px;height:8px;border-inline-start:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:rotate(-45deg);transition:transform .2s;margin-inline-start:6px}
+.fold[open] .chev{transform:rotate(135deg)}
+.fold .foldbody{padding:0 10px 10px}
+/* noise generator device */
+.device{position:relative;border-radius:14px;padding:12px;background:linear-gradient(180deg,#232c3a 0%,#161c26 55%,#11161e 100%);border:1px solid #344156;box-shadow:inset 0 1px 0 rgba(255,255,255,.07),0 6px 18px rgba(0,0,0,.35);display:flex;flex-direction:column;gap:10px}
+.device::before,.device::after{content:"";position:absolute;top:8px;width:7px;height:7px;border-radius:50%;background:radial-gradient(circle at 35% 35%,#6b778a,#2a323f)}
+.device::before{left:8px}.device::after{right:8px}
+.dev-top{display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:#7f8ba0;direction:ltr}
+.dev-pw{display:flex;align-items:center;gap:6px}
+.led{width:8px;height:8px;border-radius:50%;background:#3a2a1a;box-shadow:inset 0 0 2px #000}
+.device.on .led{background:#5bd38b;box-shadow:0 0 8px #5bd38b,0 0 2px #fff inset}
+.dev-display{border-radius:8px;padding:10px 12px;background:linear-gradient(180deg,#07110d,#0b1712);border:1px solid #1d3a2c;box-shadow:inset 0 2px 8px rgba(0,0,0,.7);font-family:var(--mono);color:#7be0a2;text-shadow:0 0 8px rgba(123,224,162,.45);display:flex;flex-direction:column;gap:6px}
+.dd-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
+.dd-big{font-size:22px;letter-spacing:.12em;font-weight:600}
+.dd-slope{font-size:12px;opacity:.8}
+.dd-bars{display:flex;align-items:flex-end;gap:3px;height:22px;flex:1}
+.dd-bars i{flex:1;max-width:10px;height:var(--h,50%);background:#7be0a2;opacity:.35;border-radius:1px}
+.device.on .dd-bars i{opacity:.9;animation:ngb .9s ease-in-out infinite alternate}
+.device.on .dd-bars i:nth-child(odd){animation-duration:.7s}
+.device.on .dd-bars i:nth-child(3n){animation-duration:1.15s}
+@keyframes ngb{from{transform:scaleY(.82)}to{transform:scaleY(1.05)}}
+.dd-bars i{transform-origin:bottom}
+.dev-keys{display:flex;gap:6px}
+.dev-keys button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 4px;border-radius:8px;border:1px solid #3a475d;background:linear-gradient(180deg,#2c3647,#1d2532);color:#cfd8e6;font-size:13px;box-shadow:0 2px 0 #0b0f15,inset 0 1px 0 rgba(255,255,255,.08)}
+.dev-keys button[aria-pressed="true"]{background:linear-gradient(180deg,#1a212c,#222b39);box-shadow:inset 0 2px 4px rgba(0,0,0,.6);transform:translateY(1px);color:#fff}
+.kled{width:6px;height:6px;border-radius:50%;background:#3b2c18}
+.dev-keys button[aria-pressed="true"] .kled{background:#ffb454;box-shadow:0 0 6px #ffb454}
+.dev-ctl{display:flex;align-items:center;gap:14px}
+.playbtn{flex:none;width:64px;height:64px;border-radius:50%;border:1px solid #4a5870;display:grid;place-items:center;color:#e7ecf3;background:radial-gradient(circle at 50% 35%,#3a4659,#1b222e 70%);box-shadow:0 4px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12),0 0 0 4px #121823,0 0 0 5px #2c3647}
+.playbtn svg{width:26px;height:26px}
+.playbtn .ic-stop{display:none}
+.device.on .playbtn{color:#0b0f15;background:radial-gradient(circle at 50% 35%,#8af0b4,#3fb873 75%);border-color:#7be0a2;box-shadow:0 0 18px rgba(91,211,139,.45),inset 0 1px 0 rgba(255,255,255,.4),0 0 0 4px #121823,0 0 0 5px #3fb873}
+.device.on .playbtn .ic-play{display:none}.device.on .playbtn .ic-stop{display:block}
+.playbtn:active{transform:scale(.96)}
+.fader{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
+.fader-lbl{display:flex;justify-content:space-between;font-family:var(--mono);font-size:10px;letter-spacing:.14em;color:#7f8ba0;direction:ltr}
+.fader input[type=range]{width:100%;direction:ltr;-webkit-appearance:none;appearance:none;height:8px;border-radius:4px;background:linear-gradient(90deg,#0b0f15,#26324a);border:1px solid #344156;box-shadow:inset 0 1px 3px rgba(0,0,0,.7)}
+.fader input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:16px;height:30px;border-radius:4px;background:linear-gradient(180deg,#e6ebf2,#9aa6b8 48%,#5e6a7d 50%,#c9d1dd);border:1px solid #2a3240;box-shadow:0 2px 4px rgba(0,0,0,.6)}
+.fader input[type=range]::-moz-range-thumb{width:16px;height:30px;border-radius:4px;background:linear-gradient(180deg,#e6ebf2,#9aa6b8 48%,#5e6a7d 50%,#c9d1dd);border:1px solid #2a3240}
+.ticks{display:flex;justify-content:space-between;padding:0 7px;direction:ltr}
+.ticks i{width:1px;height:6px;background:#4a5870}
+.ticks i:nth-child(odd){height:9px}
+@media (prefers-reduced-motion:reduce){.device.on .dd-bars i{animation:none}}
 #offInfo{font-family:var(--ui)!important}
 .vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
@@ -41,7 +100,7 @@ button,select,input,label,.tab,.chip{touch-action:manipulation;-webkit-tap-highl
 .btn.added{border-color:var(--good);color:var(--good)}
 .subhead{display:flex;align-items:center;gap:8px;margin:14px 0 8px;font-size:13px;font-weight:600}
 .subhead small{font-weight:400;color:var(--muted);font-size:11px;margin-inline-start:auto}
-html,body{background:var(--bg);color:var(--fg)}
+html,body{background:var(--bg);color:var(--fg);color-scheme:dark}
 body{font-family:var(--ui);font-size:14px;line-height:1.45;
   padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
 .wrap{max-width:1320px;margin:0 auto;display:flex;flex-direction:column;gap:12px}
@@ -51,10 +110,12 @@ button{cursor:pointer}
 .mono{font-family:var(--mono);font-variant-numeric:tabular-nums}
 
 /* top bar */
-.top{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-.brand{display:flex;align-items:center;gap:10px;margin-inline-end:auto}
+.top{display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:4px}
+.topctl{display:flex;align-items:center;justify-content:center;gap:8px;flex-wrap:wrap}
+.brand{display:flex;align-items:center;gap:10px}
+.brand > div{display:flex;flex-direction:column;align-items:center;line-height:1.2}
 .brand svg{flex:none}
-.brand b{font-size:18px;letter-spacing:.02em;font-weight:700}
+.brand b{font-size:22px;letter-spacing:.04em;font-weight:700}
 .brand span{color:var(--muted);font-size:12px}
 .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 10px;border:1px solid var(--line);border-radius:99px;font-size:12px;color:var(--muted);background:var(--panel)}
 .dot{width:8px;height:8px;border-radius:50%;background:var(--faint)}
@@ -187,59 +248,20 @@ canvas{display:block}
 <div class="wrap" dir="rtl">
   <header class="top">
     <div class="brand">
-      <svg width="30" height="30" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#18202d"/><path d="M4 19 C8 19 9 8 12 8 S15 22 18 22 S21 12 23 12 S25 16 26 16" fill="none" stroke="#62c9ff" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="22" r="2.4" fill="#ffb454"/></svg>
-      <div><b>Resona</b><br><span>מנתח חלל ומערכת הגברה</span></div>
+      <svg width="34" height="34" viewBox="0 0 30 30" aria-hidden="true"><rect width="30" height="30" rx="8" fill="#18202d"/><path d="M4 19 C8 19 9 8 12 8 S15 22 18 22 S21 12 23 12 S25 16 26 16" fill="none" stroke="#62c9ff" stroke-width="2" stroke-linecap="round"/><circle cx="18" cy="22" r="2.4" fill="#ffb454"/></svg>
+      <div><b>Resona</b><span>מנתח חלל ומערכת הגברה</span></div>
     </div>
-    <span class="pill"><span class="dot" id="srcDot"></span><span id="srcLabel">הדגמה סטטית</span></span>
-    <span class="pill mono" id="srInfo">— kHz</span>
-    <button class="btn primary" id="startBtn">הפעל מדידה</button>
+    <div class="topctl">
+      <button class="btn primary" id="startBtn">הפעל מדידה</button>
+      <span class="pill"><span class="dot" id="srcDot"></span><span id="srcLabel">הדגמה סטטית</span></span>
+      <span class="pill mono" id="srInfo">— kHz</span>
+    </div>
   </header>
 
   <div class="banner" id="banner" hidden></div>
 
-  <section class="meter">
-    <div class="card">
-      <div class="row" style="justify-content:space-between">
-        <span class="lbl">רמת לחץ קול</span>
-        <div class="chips" id="wChips">
-          <button class="chip" data-w="A" aria-pressed="true">A</button>
-          <button class="chip" data-w="C" aria-pressed="false">C</button>
-          <button class="chip" data-w="Z" aria-pressed="false">Z</button>
-          <span style="width:6px"></span>
-          <button class="chip" data-t="F" aria-pressed="true">Fast</button>
-          <button class="chip" data-t="S" aria-pressed="false">Slow</button>
-          <button class="chip" data-t="L" aria-pressed="false">Leq</button>
-        </div>
-      </div>
-      <div class="spl" style="margin-top:8px" dir="ltr">
-        <span class="big" id="splBig">--.-</span><span class="unit" id="splUnit">dB(A) Fast</span>
-      </div>
-      <div class="stats">
-        <div class="stat"><div class="lbl">Leq</div><div class="v" id="stLeq">--.-</div></div>
-        <div class="stat"><div class="lbl">Max</div><div class="v" id="stMax">--.-</div></div>
-        <div class="stat"><div class="lbl">Peak</div><div class="v" id="stPeak">--.-</div></div>
-      </div>
-    </div>
-    <div class="card">
-      <span class="lbl">עוצמת יעד</span>
-      <div class="target-row" style="margin-top:6px">
-        <input type="range" id="tgtSpl" min="60" max="115" step="1" value="95" aria-label="עוצמת יעד">
-        <span class="mono" style="font-size:18px" id="tgtSplV">95 dB(A)</span>
-      </div>
-      <div class="row" style="margin-top:8px;justify-content:space-between">
-        <span class="note" id="deltaTxt">הפרש מהיעד</span>
-        <span class="delta" id="deltaV" dir="ltr">--</span>
-      </div>
-      <div class="gauge" dir="ltr"><b></b><i id="gaugeI" style="left:50%"></i></div>
-      <div class="row note" style="justify-content:space-between;margin-top:4px" dir="ltr"><span>−12</span><span>0</span><span>+12</span></div>
-    </div>
-    <div class="card histcard">
-      <div class="row" style="justify-content:space-between"><span class="lbl">היסטוריית רמה · 60 שניות</span><span class="note mono" id="clipTxt">Headroom --</span></div>
-      <canvas id="hist" style="margin-top:6px"></canvas>
-    </div>
-  </section>
-
   <section class="stage">
+    <div class="stagehead"><span class="pillt en">Real‑Time Analyzer · EQ</span></div>
     <div class="stagebar">
       <div class="tabs" role="tablist" id="views">
         <button class="tab" role="tab" data-v="spectrum" aria-selected="true">ספקטרום</button>
@@ -310,9 +332,51 @@ canvas{display:block}
     </div>
   </section>
 
+  <section class="meter">
+    <div class="card">
+      <div class="ttl"><span class="pillt">רמת לחץ קול</span></div>
+      <div class="row" style="justify-content:center">
+        <div class="chips" id="wChips">
+          <button class="chip" data-w="A" aria-pressed="true">A</button>
+          <button class="chip" data-w="C" aria-pressed="false">C</button>
+          <button class="chip" data-w="Z" aria-pressed="false">Z</button>
+          <span style="width:6px"></span>
+          <button class="chip" data-t="F" aria-pressed="true">Fast</button>
+          <button class="chip" data-t="S" aria-pressed="false">Slow</button>
+          <button class="chip" data-t="L" aria-pressed="false">Leq</button>
+        </div>
+      </div>
+      <div class="spl" style="margin-top:8px;justify-content:center" dir="ltr">
+        <span class="big" id="splBig">--.-</span><span class="unit" id="splUnit">dB(A) Fast</span>
+      </div>
+      <div class="stats">
+        <div class="stat"><div class="lbl">Leq</div><div class="v" id="stLeq">--.-</div></div>
+        <div class="stat"><div class="lbl">Max</div><div class="v" id="stMax">--.-</div></div>
+        <div class="stat"><div class="lbl">Peak</div><div class="v" id="stPeak">--.-</div></div>
+      </div>
+    </div>
+    <div class="card">
+      <div class="ttl"><span class="pillt">עוצמת יעד</span></div>
+      <div class="target-row">
+        <input type="range" id="tgtSpl" min="60" max="115" step="1" value="95" aria-label="עוצמת יעד">
+        <span class="mono" style="font-size:18px" id="tgtSplV">95 dB(A)</span>
+      </div>
+      <div class="row" style="margin-top:8px;justify-content:space-between">
+        <span class="note" id="deltaTxt">הפרש מהיעד</span>
+        <span class="delta" id="deltaV" dir="ltr">--</span>
+      </div>
+      <div class="gauge" dir="ltr"><b></b><i id="gaugeI" style="left:50%"></i></div>
+      <div class="row note" style="justify-content:space-between;margin-top:4px" dir="ltr"><span>−12</span><span>0</span><span>+12</span></div>
+    </div>
+    <div class="card histcard">
+      <div class="ttl"><span class="pillt">היסטוריית רמה · 60 שניות</span><small class="mono" id="clipTxt">Headroom --</small></div>
+      <canvas id="hist" style="margin-top:6px"></canvas>
+    </div>
+  </section>
+
   <section class="grid">
     <div class="card panel">
-      <h2>מקור ומיקרופון <small id="profQ">—</small></h2>
+      <h2 class="ttl"><span class="pillt">מקור ומיקרופון</span><small id="profQ">—</small></h2>
       <div class="field"><span class="lbl">מקור אות</span>
         <div class="seg" id="srcSeg">
           <button data-s="mic" aria-pressed="true">מיקרופון</button>
@@ -360,7 +424,7 @@ canvas{display:block}
     </div>
 
     <div class="card panel">
-      <h2>יעד וכיוון המאסטר <small id="anaSrc">מקור ניתוח: מיצוע איטי</small></h2>
+      <h2 class="ttl"><span class="pillt">יעד וכיוון המאסטר</span><small id="anaSrc">מקור ניתוח: מיצוע איטי</small></h2>
       <div class="field"><span class="lbl">עקומת יעד</span>
         <select id="curveSel">
           <option value="flat">שטוח (ייחוס)</option>
@@ -391,18 +455,23 @@ canvas{display:block}
     </div>
 
     <div class="card panel">
-      <h2>עומסים לפי תחום <small>מול היעד</small></h2>
+      <h2 class="ttl"><span class="pillt">עומסים לפי תחום</span><small>מול היעד</small></h2>
       <div class="seg" id="loadSeg" style="margin-bottom:10px">
         <button data-l="basic" aria-pressed="true">בסיסי · 6 תחומים</button>
         <button data-l="detail" aria-pressed="false">מפורט · 11 תחומים</button>
       </div>
       <div class="loads" id="loads"></div>
-      <h2 style="margin-top:16px">הצטברויות ותהודות <small id="buildCount">0</small><button class="btn small" id="buildLock" aria-pressed="false">נעל רשימה</button></h2>
-      <div class="list" id="buildList"></div>
+      <details class="fold" id="buildFold">
+        <summary><span>הצטברויות ותהודות</span><small id="buildCount">0</small><span class="chev" aria-hidden="true"></span></summary>
+        <div class="foldbody">
+          <div class="row" style="justify-content:flex-end;margin-bottom:8px"><button class="btn small" id="buildLock" aria-pressed="false">נעל רשימה</button></div>
+          <div class="list" id="buildList"></div>
+        </div>
+      </details>
     </div>
 
     <div class="card panel">
-      <h2>מיקומי מדידה <small id="posCount">0 מיקומים</small></h2>
+      <h2 class="ttl"><span class="pillt">מיקומי מדידה</span><small id="posCount">0 מיקומים</small></h2>
       <p class="note" style="margin:0 0 10px">מדוד בכמה נקודות בקהל (3–6), הוסף כל אחת אחרי שהמיצוע התייצב. ההצעות יחושבו על הממוצע המרחבי — יציב יותר ממיקום בודד.</p>
       <div class="row">
         <button class="btn" id="posAdd">הוסף מיקום נוכחי</button>
@@ -412,23 +481,33 @@ canvas{display:block}
     </div>
 
     <div class="card panel">
-      <h2>מחולל רעש <small>להשמעה דרך המערכת</small></h2>
-      <div class="seg" id="noiseSeg" style="margin-bottom:8px">
-        <button data-n="pink" aria-pressed="true">ורוד</button>
-        <button data-n="white" aria-pressed="false">לבן</button>
-        <button data-n="brown" aria-pressed="false">חום</button>
+      <h2 class="ttl"><span class="pillt">מחולל רעש</span><small>להשמעה דרך המערכת</small></h2>
+      <div class="device" id="ngDev">
+        <div class="dev-top"><span class="dev-brand">RESONA · NG‑1</span><span class="dev-pw"><span class="led" id="ngLed"></span>OUTPUT</span></div>
+        <div class="dev-display" dir="ltr">
+          <div class="dd-row"><span class="dd-big" id="ngType">PINK</span><span class="dd-slope" id="ngSlope">0 dB/oct</span></div>
+          <div class="dd-row"><span class="dd-bars" id="ngBars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="pinkLvlV">-24 dBFS</span></div>
+        </div>
+        <div class="dev-keys" id="noiseSeg">
+          <button data-n="pink" aria-pressed="true"><span class="kled"></span>ורוד</button>
+          <button data-n="white" aria-pressed="false"><span class="kled"></span>לבן</button>
+          <button data-n="brown" aria-pressed="false"><span class="kled"></span>חום</button>
+        </div>
+        <div class="dev-ctl">
+          <button class="playbtn" id="pinkBtn" aria-label="נגן רעש"><svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><svg class="ic-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></svg></button>
+          <div class="fader">
+            <div class="fader-lbl"><span>LEVEL</span><span class="mono" dir="ltr">−40 … −6</span></div>
+            <input type="range" id="pinkLvl" min="-40" max="-6" value="-24" aria-label="רמת רעש">
+            <div class="ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
       </div>
-      <p class="note" id="noiseNote" style="margin:0 0 10px"></p>
-      <p class="note" style="margin:0 0 10px">חבר את יציאת המכשיר לקונסולה, הרם בהדרגה עד שהרעש גבוה ב־10 dB לפחות מרעש הרקע. זהירות על השמיעה ועל הטוויטרים.</p>
-      <div class="row">
-        <button class="btn" id="pinkBtn">נגן רעש</button>
-        <input type="range" id="pinkLvl" min="-40" max="-6" value="-24" style="flex:1;min-width:110px" aria-label="רמת רעש">
-        <span class="mono note" id="pinkLvlV">-24 dBFS</span>
-      </div>
+      <p class="note" id="noiseNote" style="margin:10px 0 6px"></p>
+      <p class="note" style="margin:0">חבר את יציאת המכשיר לקונסולה, הרם בהדרגה עד שהרעש גבוה ב־10 dB לפחות מרעש הרקע. זהירות על השמיעה ועל הטוויטרים.</p>
     </div>
 
     <div class="card panel">
-      <h2>תמונות להשוואה</h2>
+      <h2 class="ttl"><span class="pillt">תמונות להשוואה</span></h2>
       <p class="note" style="margin:0 0 10px">שמור עקומה לפני ואחרי שינוי ב־EQ כדי לראות את ההשפעה בפועל באולם.</p>
       <div class="row">
         <button class="btn" id="snapBtn">שמור תמונה</button>
@@ -596,7 +675,7 @@ function ensureCtx(){
  if(!S.ctx){const AC=window.AudioContext||window.webkitAudioContext;S.ctx=new AC({latencyHint:"interactive"});S.fs=S.ctx.sampleRate}
  if(S.ctx.state==="suspended")S.ctx.resume();
  if(!S.an||S.an.fftSize!==S.fft){S.an=S.ctx.createAnalyser();S.an.fftSize=S.fft;S.an.smoothingTimeConstant=0;S.an.minDecibels=-160;S.an.maxDecibels=0}
- alloc();$("#srInfo").textContent=(S.fs/1000).toFixed(1)+" kHz · "+(S.fs/S.fft).toFixed(2)+" Hz/bin";
+ if(!fbuf||fbuf.length!==S.fft/2||binHz!==S.fs/S.fft){alloc();if(S.isStatic&&!S.running)seedStatic()}$("#srInfo").textContent=(S.fs/1000).toFixed(1)+" kHz · "+(S.fs/S.fft).toFixed(2)+" Hz/bin";
 }
 S.noiseBufs={};S.noise="pink";
 function makeNoise(type){
@@ -684,7 +763,7 @@ function togglePink(){
  if(S.pink){stopNoise();return}
  const src=S.ctx.createBufferSource();src.buffer=makeNoise(S.noise);src.loop=true;const g=S.ctx.createGain();
  g.gain.value=Math.pow(10,(+$("#pinkLvl").value+20)/20);src.connect(g);g.connect(S.ctx.destination);src.start();
- S.pink={src,g};$("#pinkBtn").textContent="עצור "+NOISE_INFO[S.noise][0];
+ S.pink={src,g};ngUI();
 }
 
 /* ---------- per-frame analysis ---------- */
@@ -1302,9 +1381,13 @@ $("#pinkBtn").onclick=togglePink;
 $("#buildLock").onclick=e=>{S.bLock=!S.bLock;e.target.setAttribute("aria-pressed",S.bLock);e.target.textContent=S.bLock?"נעול · שחרר":"נעל רשימה";e.target.style.borderColor=S.bLock?"var(--eq)":""};
 S.loadsDetail=LS.get("loadsDetail",false);segSel("#loadSeg","l",S.loadsDetail?"detail":"basic");
 $$("#loadSeg button").forEach(b=>b.onclick=()=>{S.loadsDetail=b.dataset.l==="detail";LS.set("loadsDetail",S.loadsDetail);segSel("#loadSeg","l",b.dataset.l);analyze()});
-function stopNoise(){if(!S.pink)return;try{S.pink.src.stop()}catch(e){}S.pink=null;$("#pinkBtn").textContent="נגן "+NOISE_INFO[S.noise][0]}
-function setNoise(n){S.noise=n;segSel("#noiseSeg","n",n);$("#noiseNote").textContent=NOISE_INFO[n][1];if(S.pink){stopNoise();togglePink()}else $("#pinkBtn").textContent="נגן "+NOISE_INFO[n][0]}
-$$("#noiseSeg button").forEach(b=>b.onclick=()=>setNoise(b.dataset.n));setNoise("pink");
+function stopNoise(){if(!S.pink)return;try{S.pink.src.stop()}catch(e){}S.pink=null;ngUI()}
+const NG_HW={pink:["PINK","0 dB/oct"],white:["WHITE","+3 dB/oct"],brown:["BROWN","−3 dB/oct"]};
+function ngUI(){const on=!!S.pink,d=$("#ngDev");d.classList.toggle("on",on);$("#pinkBtn").setAttribute("aria-label",(on?"עצור ":"נגן ")+NOISE_INFO[S.noise][0]);$("#pinkBtn").setAttribute("aria-pressed",on);
+ $("#ngType").textContent=NG_HW[S.noise][0];$("#ngSlope").textContent=NG_HW[S.noise][1];
+ const bars=[...document.querySelectorAll("#ngBars i")],sl={pink:0,white:3,brown:-3}[S.noise];bars.forEach((b,i)=>b.style.setProperty("--h",clamp(55+sl*(i-5.5)*1.6,12,100)+"%"))}
+function setNoise(n){S.noise=n;segSel("#noiseSeg","n",n);$("#noiseNote").textContent=NOISE_INFO[n][1];if(S.pink){stopNoise();togglePink()}else ngUI()}
+$$("#noiseSeg button").forEach(b=>b.onclick=()=>setNoise(b.dataset.n));setNoise("pink");ngUI();
 $("#pinkLvl").oninput=e=>{$("#pinkLvlV").textContent=e.target.value+" dBFS";if(S.pink)S.pink.g.gain.value=Math.pow(10,(+e.target.value+20)/20)};
 
 function showBanner(h){const b=$("#banner");b.innerHTML=h;b.hidden=false}
