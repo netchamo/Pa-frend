@@ -30,7 +30,7 @@
 }
 *{box-sizing:border-box}
 label.btn{cursor:pointer;display:inline-flex}
-.chip,#splUnit,#clipTxt,#offInfo,#nbTitle{font-family:var(--ui)!important}
+#offInfo{font-family:var(--ui)!important}
 .vh{position:absolute;width:1px;height:1px;opacity:0;pointer-events:none}
 html{touch-action:manipulation;-webkit-text-size-adjust:100%;text-size-adjust:100%}
 button,select,input,label,.tab,.chip{touch-action:manipulation;-webkit-tap-highlight-color:transparent}
@@ -206,18 +206,18 @@ canvas{display:block}
           <button class="chip" data-w="C" aria-pressed="false">C</button>
           <button class="chip" data-w="Z" aria-pressed="false">Z</button>
           <span style="width:6px"></span>
-          <button class="chip" data-t="F" aria-pressed="true">מהיר</button>
-          <button class="chip" data-t="S" aria-pressed="false">איטי</button>
-          <button class="chip" data-t="L" aria-pressed="false">ממוצע</button>
+          <button class="chip" data-t="F" aria-pressed="true">Fast</button>
+          <button class="chip" data-t="S" aria-pressed="false">Slow</button>
+          <button class="chip" data-t="L" aria-pressed="false">Leq</button>
         </div>
       </div>
       <div class="spl" style="margin-top:8px" dir="ltr">
-        <span class="big" id="splBig">--.-</span><span class="unit" id="splUnit">dB(A) מהיר</span>
+        <span class="big" id="splBig">--.-</span><span class="unit" id="splUnit">dB(A) Fast</span>
       </div>
       <div class="stats">
-        <div class="stat"><div class="lbl">ממוצע (Leq)</div><div class="v" id="stLeq">--.-</div></div>
-        <div class="stat"><div class="lbl">מקסימום</div><div class="v" id="stMax">--.-</div></div>
-        <div class="stat"><div class="lbl">שיא רגעי</div><div class="v" id="stPeak">--.-</div></div>
+        <div class="stat"><div class="lbl">Leq</div><div class="v" id="stLeq">--.-</div></div>
+        <div class="stat"><div class="lbl">Max</div><div class="v" id="stMax">--.-</div></div>
+        <div class="stat"><div class="lbl">Peak</div><div class="v" id="stPeak">--.-</div></div>
       </div>
     </div>
     <div class="card">
@@ -234,7 +234,7 @@ canvas{display:block}
       <div class="row note" style="justify-content:space-between;margin-top:4px" dir="ltr"><span>−12</span><span>0</span><span>+12</span></div>
     </div>
     <div class="card histcard">
-      <div class="row" style="justify-content:space-between"><span class="lbl">היסטוריית רמה · 60 שניות</span><span class="note mono" id="clipTxt">מרווח עד קליפ --</span></div>
+      <div class="row" style="justify-content:space-between"><span class="lbl">היסטוריית רמה · 60 שניות</span><span class="note mono" id="clipTxt">Headroom --</span></div>
       <canvas id="hist" style="margin-top:6px"></canvas>
     </div>
   </section>
@@ -261,9 +261,9 @@ canvas{display:block}
         <option value="inf">מיצוע מצטבר</option>
       </select>
       <select class="sel" id="fftSel" aria-label="רזולוציה">
-        <option value="8192">רזולוציה נמוכה</option>
-        <option value="16384" selected>רזולוציה רגילה</option>
-        <option value="32768">רזולוציה גבוהה (בסים)</option>
+        <option value="8192">FFT 8k</option>
+        <option value="16384" selected>FFT 16k</option>
+        <option value="32768">FFT 32k</option>
       </select>
       <span class="spacer"></span>
       <label class="tog"><input type="checkbox" id="tLive" checked>חי</label>
@@ -293,18 +293,18 @@ canvas{display:block}
         <div class="hud-band" id="hBand"></div>
         <button class="hud-exit" id="hExit" aria-label="צא ממסך מלא">✕ יציאה</button>
       </div>
-      <div class="hint" id="hint">לחיצה כפולה מוסיפה פס · גרירה מזיזה · גלגלת או צביטה בשתי אצבעות משנה רוחב פס</div>
+      <div class="hint" id="hint">לחיצה כפולה מוסיפה פס · גרירה מזיזה · גלגלת או צביטה בשתי אצבעות משנה Q</div>
     </div>
     <div class="nodebar" id="nodebar" hidden>
-      <span class="swatch" id="nbSw"></span><b id="nbTitle" class="mono">פס 1</b>
+      <span class="swatch" id="nbSw"></span><b id="nbTitle" class="mono">Band 1</b>
       <label>סוג
         <select class="sel" id="nbType">
-          <option value="bell">פעמון</option><option value="lowshelf">מדף נמוך</option><option value="highshelf">מדף גבוה</option>
-          <option value="highpass">חיתוך נמוכים</option><option value="lowpass">חיתוך גבוהים</option><option value="notch">חריץ</option>
+          <option value="bell">Bell</option><option value="lowshelf">Low Shelf</option><option value="highshelf">High Shelf</option>
+          <option value="highpass">Low Cut</option><option value="lowpass">High Cut</option><option value="notch">Notch</option>
         </select></label>
       <label>תדר <input type="number" id="nbF" min="20" max="20000" step="1"> Hz</label>
       <label>גיין <input type="number" id="nbG" min="-24" max="24" step="0.1"> dB</label>
-      <label>רוחב (Q) <input type="range" id="nbQ" min="0" max="1" step="0.001"><span class="mono" id="nbQv">1.00</span></label>
+      <label>Q <input type="range" id="nbQ" min="0" max="1" step="0.001"><span class="mono" id="nbQv">1.00</span></label>
       <label class="tog"><input type="checkbox" id="nbOn" checked>פעיל</label>
       <button class="btn small" id="nbDel">מחק פס</button>
     </div>
@@ -767,12 +767,12 @@ function renderSugg(){
  const L=$("#sugList");
  if(!S.sugg.length&&!(S.skipped||[]).length){L.innerHTML='<div class="empty">ההיענות קרובה ליעד — אין צורך בתיקון.</div>';return}
  L.innerHTML=S.sugg.map((b,i)=>`<div class="item"><span class="swatch" style="background:${BAND_COLORS[i%8]}"></span>
-  <div><div class="t">${typeName(b.type)} · ${fmtF(b.f)}Hz · ${b.g>0?"+":""}${b.g.toFixed(1)} dB · Q ${b.q.toFixed(2)}</div>
+  <div><div class="t" dir="ltr" style="text-align:right">${typeName(b.type)} · ${fmtF(b.f)}Hz · ${b.g>0?"+":""}${b.g.toFixed(1)} dB · Q ${b.q.toFixed(2)}</div>
   <div class="s">${b.g<0?(b.f<300?"חיתוך הצטברות נמוכה":"חיתוך עודף"):"השלמה עדינה"} · ${noteOf(b.f)}</div></div>
   ${(()=>{const k=S.bands.findIndex(x=>x.type===b.type&&x.f===b.f);return k>=0?`<button class="btn small added" data-rm="${k}">נוסף ✓ · הסר</button>`:`<button class="btn small" data-add="${i}">הוסף</button>`})()}</div>`).join("")+
   ((S.skipped||[]).length?`<div class="note" style="padding:6px 2px">שקעים צרים שלא מתוקנים (כנראה ביטולי חדר — הזזת רמקול/סאב עדיפה על EQ): <span class="mono" dir="ltr">${S.skipped.slice().sort((a,b)=>a.f-b.f).map(s=>fmtF(s.f)+"Hz").join(" · ")}</span></div>`:"");
 }
-const typeName=t=>({bell:"פעמון",lowshelf:"מדף נמוך",highshelf:"מדף גבוה",highpass:"חיתוך נמוכים",lowpass:"חיתוך גבוהים",notch:"חריץ"})[t]||t;
+const typeName=t=>({bell:"Bell",lowshelf:"Low Shelf",highshelf:"High Shelf",highpass:"Low Cut",lowpass:"High Cut",notch:"Notch"})[t]||t;
 
 const RANGES_D=[["סאב",20,60],["באס",60,160],["באס עליון",160,320],["נמוך־אמצע",320,600],["אמצע נמוך",600,900],["אמצע",900,1800],["אמצע עליון",1800,3200],["נוכחות",3200,5000],["בהירות",5000,8000],["גבוהים",8000,11000],["אוויר",11000,20000]];
 const RANGES=[["סאב",20,60],["באס",60,250],["נמוך־אמצע",250,500],["אמצע",500,2000],["עליון",2000,6000],["אוויר",6000,20000]];
@@ -862,7 +862,7 @@ function updateMeterUI(){
  const L=S.tw==="L"?(S.leqT>0?db10(S.leqE/S.leqT)+off:NaN):db10(S.tw==="S"?S.levelS:S.levelF)+off;
  const ok=isFinite(L)&&L>0;
  $("#splBig").textContent=ok?L.toFixed(1):"--.-";
- $("#splUnit").textContent="dB("+S.w+") "+(S.tw==="L"?"ממוצע":S.tw==="S"?"איטי":"מהיר");
+ $("#splUnit").textContent="dB("+S.w+") "+(S.tw==="L"?"Leq":S.tw==="S"?"Slow":"Fast");
  $("#stLeq").textContent=S.leqT>0?(db10(S.leqE/S.leqT)+off).toFixed(1):"--.-";
  $("#stMax").textContent=S.lmax>0?S.lmax.toFixed(1):"--.-";
  $("#stPeak").textContent=S.peak>0?S.peak.toFixed(1):"--.-";
@@ -871,7 +871,7 @@ function updateMeterUI(){
  $("#deltaV").style.color=!isFinite(d)?"":Math.abs(d)<1.5?"var(--good)":Math.abs(d)<4?"var(--warn)":"var(--bad)";
  $("#deltaTxt").textContent=!isFinite(d)?"הפרש מהיעד":Math.abs(d)<1.5?"בטווח היעד":d>0?"מעל היעד":"מתחת ליעד";
  $("#gaugeI").style.left=(50+clamp(isFinite(d)?d:0,-12,12)/12*50)+"%";
- $("#clipTxt").textContent=S.pkShow!=null&&S.pkShow>-120?"מרווח עד קליפ "+(-S.pkShow).toFixed(1)+" dB":"מרווח עד קליפ --";
+ $("#clipTxt").textContent=S.pkShow!=null&&S.pkShow>-120?"Headroom "+(-S.pkShow).toFixed(1)+" dB":"Headroom --";
  $("#clipTxt").style.color=S.pkShow>-1?"var(--bad)":S.pkShow>-6?"var(--warn)":"";
 }
 
@@ -1030,7 +1030,7 @@ function drawScope(){
  cx.shadowColor="rgba(98,201,255,.7)";cx.shadowBlur=8;cx.strokeStyle="#8fdaff";cx.lineWidth=1.5;cx.stroke();cx.shadowBlur=0;
  cx.setLineDash([4,4]);cx.strokeStyle="rgba(255,180,84,.7)";for(const s of [1,-1]){const y=mid-s*rms*gain*h/2;cx.beginPath();cx.moveTo(x0,y);cx.lineTo(x0+w,y);cx.stroke()}cx.setLineDash([]);
  cx.textAlign="left";cx.textBaseline="top";cx.fillStyle="#cfd8e6";
- cx.fillText(`חלון ${(N/S.fs*1000).toFixed(1)} אלפיות · הגדלה ×${gain.toFixed(1)} · ממוצע ${(20*Math.log10(rms+1e-12)).toFixed(1)} dBFS · שיא ${(20*Math.log10(pk+1e-12)).toFixed(1)} dBFS · יחס שיא/ממוצע ${(20*Math.log10((pk+1e-12)/(rms+1e-12))).toFixed(1)} dB`,x0+6,y0+6);
+ cx.fillText(`${(N/S.fs*1000).toFixed(1)} ms · zoom ×${gain.toFixed(1)} · RMS ${(20*Math.log10(rms+1e-12)).toFixed(1)} dBFS · Peak ${(20*Math.log10(pk+1e-12)).toFixed(1)} dBFS · Crest ${(20*Math.log10((pk+1e-12)/(rms+1e-12))).toFixed(1)} dB`,x0+6,y0+6);
 }
 function drawHist(){
  const w=hc.width/DPR,h=hc.height/DPR;if(!w)return;hx.clearRect(0,0,w,h);
@@ -1199,7 +1199,7 @@ function selectBand(j){S.sel=j;fillNodebar();queueActive()}
 const qToR=q=>Math.log(q/.3)/Math.log(20/.3),rToQ=r=>.3*Math.pow(20/.3,r);
 function fillNodebar(){
  const nb=$("#nodebar");if(S.sel<0||!S.bands[S.sel]){nb.hidden=true;return}nb.hidden=false;const b=S.bands[S.sel];
- $("#nbSw").style.background=BAND_COLORS[S.sel%8];$("#nbTitle").textContent="פס "+(S.sel+1);
+ $("#nbSw").style.background=BAND_COLORS[S.sel%8];$("#nbTitle").textContent="Band "+(S.sel+1);
  $("#nbType").value=b.type;if(document.activeElement!==$("#nbF"))$("#nbF").value=b.f;if(document.activeElement!==$("#nbG"))$("#nbG").value=b.g;$("#nbG").disabled=!hasGain(b.type);
  $("#nbQ").value=qToR(b.q);$("#nbQv").textContent=b.q.toFixed(2);$("#nbOn").checked=b.on;
 }
@@ -1210,7 +1210,7 @@ function renderActive(){
  if(!S.bands.length){L.innerHTML='<div class="empty">אין פסים פעילים. הוסף מההצעות, מההצטברויות או בלחיצה כפולה על הגרף.</div>';return}
  L.innerHTML=S.bands.map((b,i)=>`<div class="item${b.on?"":" off"}${i===S.sel?" sel":""}" style="${i===S.sel?"border-color:"+BAND_COLORS[i%8]:""}">
   <span class="swatch" style="background:${BAND_COLORS[i%8]}"></span>
-  <div><div class="t">${i+1}. ${typeName(b.type)} · ${fmtF(b.f)}Hz${hasGain(b.type)?" · "+(b.g>0?"+":"")+b.g.toFixed(1)+" dB":""} · Q ${b.q.toFixed(2)}</div>
+  <div><div class="t" dir="ltr" style="text-align:right">${i+1}. ${typeName(b.type)} · ${fmtF(b.f)}Hz${hasGain(b.type)?" · "+(b.g>0?"+":"")+b.g.toFixed(1)+" dB":""} · Q ${b.q.toFixed(2)}</div>
   <div class="s">${b.on?"פעיל":"כבוי"} · ${noteOf(b.f)}</div></div>
   <div class="acts"><button class="btn small" data-act="tog" data-i="${i}">${b.on?"כבה":"הפעל"}</button><button class="btn small" data-act="edit" data-i="${i}">ערוך</button><button class="btn small" data-act="del" data-i="${i}" aria-label="מחק">✕</button></div></div>`).join("");
 }
