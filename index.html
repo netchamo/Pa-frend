@@ -31,6 +31,25 @@
 }
 *{box-sizing:border-box}
 label.btn{cursor:pointer;display:inline-flex}
+.helpbtn{display:inline-flex;align-items:center;gap:8px;align-self:flex-start}
+.qm{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--spec2);color:#fff;font-weight:700;font-size:12px}
+.qlink{background:none;border:0;color:var(--spec);text-decoration:underline;font-size:11px;padding:0 4px;cursor:pointer}
+.modal{border:1px solid var(--line2);border-radius:16px;background:var(--panel);color:var(--fg);padding:0;width:min(640px,calc(100vw - 24px));max-height:min(86vh,820px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
+.modal::backdrop{background:rgba(3,5,9,.72);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px)}
+.modal[open]{display:flex;flex-direction:column}
+.mhead{flex:none;display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);background:var(--panel2)}
+.mhead h3{margin:0;font-size:16px}
+.mclose{width:36px;height:36px;border-radius:50%;border:1px solid var(--line2);background:var(--bg);font-size:16px}
+.mtabs{flex:none;display:flex;gap:6px;padding:10px 16px;border-bottom:1px solid var(--line);overflow-x:auto}
+.mtabs a{flex:none;color:var(--fg);text-decoration:none;font-size:12.5px;padding:5px 11px;border-radius:99px;border:1px solid var(--line2);background:var(--bg)}
+.mbody{flex:1;min-height:0;overflow-y:auto;padding:4px 18px 18px;line-height:1.65;font-size:14px;-webkit-overflow-scrolling:touch}
+.mbody section{padding-top:12px}
+.mbody h4{margin:6px 0 6px;font-size:14.5px;color:var(--spec)}
+.mbody p,.mbody ul,.mbody ol{margin:0 0 8px}
+.mbody ul,.mbody ol{padding-inline-start:20px}
+.mbody li{margin-bottom:4px}
+.mnote{font-size:12.5px;color:#f3d9a8;background:#221b10;border:1px solid #5a4520;border-radius:8px;padding:8px 10px}
+.mbody pre{background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:var(--mono);font-size:12px;overflow-x:auto;text-align:left}
 .rawin{margin-top:10px;padding-top:8px;border-top:1px dashed var(--line);font-size:11.5px;color:var(--muted);text-align:center}
 .rawin.bad{color:var(--bad)}
 /* centered pill titles */
@@ -40,7 +59,18 @@ label.btn{cursor:pointer;display:inline-flex}
 .pillt.en{font-family:var(--mono);text-transform:uppercase;letter-spacing:.14em;font-size:11.5px;color:#cfe9ff;border-color:#2b5f8f;background:linear-gradient(180deg,#183049,#132235)}
 .stagehead{display:flex;justify-content:center;padding:10px 10px 0;background:var(--panel2)}
 .stage.imm .stagehead{display:none}
-.stagebar{justify-content:center}
+.stagebar{flex-direction:column;align-items:stretch;gap:10px;padding:10px 12px 12px}
+.stagebar .tabs{align-self:center;max-width:100%}
+.sb-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+.sb-row .sel{flex:1 1 0;min-width:0;max-width:200px;padding:7px 8px;font-size:13px}
+.sb-toggles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;max-width:760px;width:100%;align-self:center}
+.sb-toggles .tog{justify-content:center;padding:7px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;cursor:pointer;color:var(--muted)}
+.sb-toggles .tog:has(input:checked){border-color:var(--spec2);color:var(--fg);background:#132235}
+.sb-actions{display:flex;gap:8px;justify-content:center;max-width:760px;width:100%;align-self:center}
+.sb-actions .btn{flex:1;padding:10px 8px}
+.btn.bigfs{flex:2;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-size:16px;padding:12px 16px;border-radius:12px;box-shadow:0 0 0 1px #3a9aec,0 6px 20px rgba(45,141,224,.35)}
+.btn.bigfs svg{width:22px;height:22px}
+@media (max-width:640px){.sb-toggles{grid-template-columns:repeat(3,minmax(0,1fr))}}
 .spl{justify-content:center}
 .meter .card .stats{text-align:center}
 /* collapsible bar */
@@ -271,34 +301,39 @@ canvas{display:block}
         <button class="tab" role="tab" data-v="sgram" aria-selected="false">ספקטרוגרמה</button>
         <button class="tab" role="tab" data-v="scope" aria-selected="false">צורת גל</button>
       </div>
-      <select class="sel" id="smooth" aria-label="החלקה">
-        <option value="0.0208">החלקה 1/48</option>
-        <option value="0.0417">החלקה 1/24</option>
-        <option value="0.0833">החלקה 1/12</option>
-        <option value="0.1667" selected>החלקה 1/6</option>
-        <option value="0.3333">החלקה 1/3</option>
-        <option value="1">החלקה 1/1</option>
-      </select>
-      <select class="sel" id="avg" aria-label="מיצוע">
-        <option value="fast" selected>מיצוע מהיר</option>
-        <option value="slow">מיצוע איטי</option>
-        <option value="inf">מיצוע מצטבר</option>
-      </select>
-      <select class="sel" id="fftSel" aria-label="רזולוציה">
-        <option value="8192">FFT 8k</option>
-        <option value="16384" selected>FFT 16k</option>
-        <option value="32768">FFT 32k</option>
-      </select>
-      <span class="spacer"></span>
-      <label class="tog"><input type="checkbox" id="tLive" checked>חי</label>
-      <label class="tog"><input type="checkbox" id="tPeak" checked>שיא</label>
-      <label class="tog"><input type="checkbox" id="tTarget" checked>יעד</label>
-      <label class="tog"><input type="checkbox" id="tEq" checked>EQ</label>
-      <label class="tog"><input type="checkbox" id="tPred" checked>צפוי</label>
-      <label class="tog"><input type="checkbox" id="tBuild" checked>הצטברויות</label>
-      <button class="btn small primary" id="immBtn">⛶ מסך מלא</button>
-      <button class="btn small" id="freezeBtn">הקפא</button>
-      <button class="btn small" id="resetAvg">אפס מיצוע</button>
+      <div class="sb-row">
+        <select class="sel" id="smooth" aria-label="החלקה">
+          <option value="0.0208">החלקה 1/48</option>
+          <option value="0.0417">החלקה 1/24</option>
+          <option value="0.0833">החלקה 1/12</option>
+          <option value="0.1667" selected>החלקה 1/6</option>
+          <option value="0.3333">החלקה 1/3</option>
+          <option value="1">החלקה 1/1</option>
+        </select>
+        <select class="sel" id="avg" aria-label="מיצוע">
+          <option value="fast" selected>מיצוע מהיר</option>
+          <option value="slow">מיצוע איטי</option>
+          <option value="inf">מיצוע מצטבר</option>
+        </select>
+        <select class="sel" id="fftSel" aria-label="רזולוציה">
+          <option value="8192">FFT 8k</option>
+          <option value="16384" selected>FFT 16k</option>
+          <option value="32768">FFT 32k</option>
+        </select>
+      </div>
+      <div class="sb-toggles">
+        <label class="tog"><input type="checkbox" id="tLive" checked>חי</label>
+        <label class="tog"><input type="checkbox" id="tPeak" checked>שיא</label>
+        <label class="tog"><input type="checkbox" id="tTarget" checked>יעד</label>
+        <label class="tog"><input type="checkbox" id="tEq" checked>EQ</label>
+        <label class="tog"><input type="checkbox" id="tPred" checked>צפוי</label>
+        <label class="tog"><input type="checkbox" id="tBuild" checked>הצטברויות</label>
+      </div>
+      <div class="sb-actions">
+        <button class="btn primary bigfs" id="immBtn"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>מסך מלא</button>
+        <button class="btn" id="freezeBtn">הקפא</button>
+        <button class="btn" id="resetAvg">אפס מיצוע</button>
+      </div>
     </div>
     <div class="canvaswrap" id="cw">
       <canvas id="plot"></canvas>
@@ -407,12 +442,13 @@ canvas{display:block}
         <select id="profSel"></select>
         <span class="note" id="profNote"></span>
       </div>
-      <div class="field"><span class="lbl">קובץ כיול (UMIK / Dayton / Sonarworks · תדר + dB)</span>
+      <div class="field"><span class="lbl">קובץ כיול (UMIK / Dayton / Sonarworks · תדר + dB) <button class="qlink" type="button" data-help="files">מה זה?</button></span>
         <span class="row"><label class="btn small" for="calFile">בחר קובץ כיול</label><span class="note" id="calName">לא נבחר קובץ</span></span><input type="file" id="calFile" accept=".txt,.cal,.frd,.csv,text/plain" class="vh">
         <span class="note mono" id="calInfo"></span>
       </div>
       <div class="calbox">
         <div class="row" style="justify-content:space-between"><b style="font-size:13px">כיול רמה</b><span class="note mono" id="offInfo">היסט —</span></div>
+        <button class="btn small helpbtn" id="calHelpBtn" type="button"><span class="qm">?</span>איך מכיילים — מדריך מלא</button>
         <div class="seg" id="calSeg">
           <button data-c="calib" aria-pressed="true">קלברטור</button>
           <button data-c="ref" aria-pressed="false">מד SPL ייחוס</button>
@@ -520,7 +556,53 @@ canvas{display:block}
       </div>
     </div>
   </section>
-  <div class="foot">פרופילי המיקרופון המובנים מקורבים. לדיוק מלא: מיקרופון מדידה עם קובץ כיול אישי, וכיול רמה מול קלברטור.</div>
+  <dialog id="calHelp" class="modal" dir="rtl" aria-labelledby="chTitle">
+  <div class="mhead"><h3 id="chTitle">מדריך כיול</h3><button class="mclose" id="calHelpClose" aria-label="סגור">✕</button></div>
+  <nav class="mtabs"><a href="#ch-why">למה</a><a href="#ch-calib">קלברטור</a><a href="#ch-ref">מד ייחוס</a><a href="#ch-files">קבצי כיול</a><a href="#ch-tips">טיפים</a></nav>
+  <div class="mbody">
+    <section id="ch-why"><h4>למה צריך כיול</h4>
+      <p>לכל מיקרופון יש שתי תכונות שהאפליקציה צריכה לדעת:</p>
+      <ul><li><b>רגישות (רמה):</b> כמה dB SPL שווה אות מלא במיקרופון. בלעדיה המספר הגדול של העוצמה יכול לטעות בכמה dB. את זה מתקן <b>כיול רמה</b>.</li>
+      <li><b>היענות תדרים:</b> איך המיקרופון "צובע" בסים וגבוהים. בלעדיה הגרף עקום גם כשהמערכת שטוחה. את זה מתקן <b>קובץ כיול</b>.</li></ul>
+      <p>בלי כיול, האפליקציה משתמשת בערכים טיפוסיים לפי פרופיל המיקרופון. זה טוב להתמצאות, אבל לא למדידה מדויקת.</p></section>
+    <section id="ch-calib"><h4>כיול רמה עם קלברטור (הכי מדויק)</h4>
+      <p>קלברטור הוא מכשיר קטן שמשמיע טון של 1 kHz בעוצמה ידועה, בדרך כלל 94 dB או 114 dB.</p>
+      <ol><li>חבר את המיקרופון וקבע את הגיין בכרטיס הקול. <b>אחרי הכיול לא נוגעים בגיין.</b></li>
+      <li>לחץ "הפעל מדידה" ובחר את פרופיל המיקרופון הנכון.</li>
+      <li>הלבש את הקלברטור על ראש המיקרופון עד הסוף והדלק אותו.</li>
+      <li>בתיבת כיול רמה בחר "קלברטור" והזן את הרמה שלו (94 או 114).</li>
+      <li>לחץ "כייל עכשיו" והמתן 3 שניות בלי לזוז.</li></ol>
+      <p class="mnote">מיקרופון טלפון לא נכנס לקלברטור רגיל. לטלפון השתמש בשיטת מד הייחוס.</p></section>
+    <section id="ch-ref"><h4>כיול מול מד SPL ייחוס</h4>
+      <p>מתאים לטלפונים ולכל מי שאין לו קלברטור. צריך מד SPL אמין, או מיקרופון מדידה שכבר כויל.</p>
+      <ol><li>השמע רעש ורוד יציב דרך הרמקולים, בערך 80–90 dB. אפשר מהמחולל באפליקציה.</li>
+      <li>הצב את הטלפון ואת מד הייחוס <b>באותה נקודה</b>, צמודים, מכוונים לאותו כיוון.</li>
+      <li>במד הייחוס בחר A ו־Slow, ובאפליקציה אותו שקלול (A).</li>
+      <li>בתיבת כיול רמה בחר "מד SPL ייחוס" והזן את המספר שמד הייחוס מראה.</li>
+      <li>לחץ "כייל עכשיו". הרעש צריך להישאר יציב במשך 3 השניות.</li></ol>
+      <p class="mnote">אל תכייל בחדר שקט עם 94 בלי קלברטור — זה מזיז את כל הקריאות בעשרות dB. האפליקציה חוסמת כיול שמשנה את הרגישות ביותר מ־20 dB.</p></section>
+    <section id="ch-files"><h4>קבצי כיול</h4>
+      <p>קובץ כיול הוא קובץ טקסט עם שתי עמודות: <b>תדר</b> ו<b>־dB</b>, שורה לכל תדר. הוא מתאר את ההיענות של <b>המיקרופון המסוים שלך</b>, לפי המספר הסידורי.</p>
+      <ul><li><b>miniDSP UMIK‑1 / UMIK‑2:</b> מורידים מאתר miniDSP לפי המספר הסידורי. יש שני קבצים: <b>0°</b> כשהמיקרופון מכוון לרמקול, ו<b>־90°</b> כשהוא מכוון לתקרה. שורת "Sens Factor" בקובץ מזוהה ומוצגת.</li>
+      <li><b>Dayton iMM‑6 / EMM‑6:</b> מורידים מאתר Dayton Audio לפי המספר הסידורי.</li>
+      <li><b>מיקרופונים בכיול מעבדה</b> (Sonarworks, Cross‑Spectrum ועוד): מגיעים עם קובץ דומה, בדרך כלל ‎.txt או ‎.frd.</li>
+      <li><b>מיקרופון טלפון:</b> אין קובץ רשמי. האפליקציה משתמשת בפרופיל משוער. אפשר להכין קובץ אישי בהשוואה למיקרופון מדידה מכויל.</li></ul>
+      <p><b>איך טוענים:</b> במקור ומיקרופון ← "בחר קובץ כיול". הפרופיל עובר אוטומטית ל"מותאם", והעקומה מוחלת על כל התצוגות. קובץ כיול <b>לא</b> מחליף כיול רמה — עדיף לעשות את שניהם.</p>
+      <pre dir="ltr">"Sens Factor =-1.23dB, SERNO: 7000000"
+20.0   -1.42
+25.0   -0.98
+31.5   -0.61
+...
+20000  +1.10</pre></section>
+    <section id="ch-tips"><h4>טיפים</h4>
+      <ul><li>כייל מחדש כשמחליפים מיקרופון, כרטיס קול, כבל USB או גיין.</li>
+      <li>הכיול נשמר במכשיר לכל פרופיל בנפרד. "אפס לברירת מחדל" מחזיר לרגישות הטיפוסית.</li>
+      <li>אחרי כיול בדוק בשורת "כניסה גולמית" שיש מרווח לפני קליפ, לפחות 6 dB.</li>
+      <li>דיבור רגיל במרחק חצי מטר אמור להיות בערך 60–70 dB. מספר רחוק מזה מרמז על כיול שגוי.</li>
+      <li>ציון "אמינות המדידה" מראה מה עוד חסר כדי שהמדידה תהיה מדויקת.</li></ul></section>
+  </div>
+</dialog>
+<div class="foot">פרופילי המיקרופון המובנים מקורבים. לדיוק מלא: מיקרופון מדידה עם קובץ כיול אישי, וכיול רמה מול קלברטור.</div>
 </div>
 
 <script>
@@ -1221,7 +1303,7 @@ $("#hPk").onclick=()=>{IM.pk=!IM.pk;LS.set("immPeak",IM.pk);syncImmBtns()};
 $("#hTgt").onclick=()=>{IM.tgt=!IM.tgt;syncImmBtns()};
 $("#hRot").onclick=()=>{IM.landscape=!IM.landscape;try{IM.landscape?screen.orientation.lock("landscape").catch(()=>{}):screen.orientation.unlock()}catch(e){}syncImmBtns();layoutImm()};
 ["pointermove","pointerdown"].forEach(ev=>$(".stage").addEventListener(ev,()=>{if(S.imm)poke()}));
-document.addEventListener("keydown",e=>{if(e.key==="Escape")exitImm();if((e.key==="f"||e.key==="F")&&!/INPUT|SELECT/.test(document.activeElement.tagName)){S.imm?exitImm():enterImm()}});
+document.addEventListener("keydown",e=>{if(e.key==="Escape"&&!CH.open)exitImm();if((e.key==="f"||e.key==="F")&&!/INPUT|SELECT/.test(document.activeElement.tagName)){S.imm?exitImm():enterImm()}});
 const onFs=()=>{if(S.imm&&!document.fullscreenElement&&!document.webkitFullscreenElement&&IM.fsWas)exitImm();IM.fsWas=!!(document.fullscreenElement||document.webkitFullscreenElement)};
 document.addEventListener("fullscreenchange",onFs);document.addEventListener("webkitfullscreenchange",onFs);
 
@@ -1413,6 +1495,16 @@ function offsetSane(){const o=S.offsets[S.profile];return o==null||S.profile==="
 function checkOffset(){if(offsetSane())return;const o=S.offsets[S.profile],d=o-prof().sens;
  showBanner(`נמצא כיול שמור שמזיז את הקריאה ב־${d>0?"+":""}${d.toFixed(0)} dB לעומת הרגישות הטיפוסית של ${prof().name}. זו כנראה הסיבה לקריאות לא הגיוניות (למשל 130 dB בדיבור). <button class="btn small warm" id="fixOff">אפס את הכיול</button>`);
  const b=document.getElementById("fixOff");if(b)b.onclick=()=>{$("#calReset").click();hideBanner();toast("הכיול אופס לרגישות טיפוסית")}}
+
+/* ---------- calibration guide ---------- */
+const CH=$("#calHelp");
+function openHelp(sec){try{CH.showModal()}catch(e){CH.setAttribute("open","")}const t=sec&&CH.querySelector("#ch-"+sec);CH.querySelector(".mbody").scrollTop=t?t.offsetTop-8:0}
+function closeHelp(){try{CH.close()}catch(e){CH.removeAttribute("open")}}
+$("#calHelpBtn").onclick=()=>openHelp();
+document.querySelectorAll("[data-help]").forEach(b=>b.onclick=()=>openHelp(b.dataset.help));
+$("#calHelpClose").onclick=closeHelp;
+CH.addEventListener("click",e=>{if(e.target===CH)closeHelp()});
+CH.querySelectorAll(".mtabs a").forEach(a=>a.onclick=e=>{e.preventDefault();const t=CH.querySelector(a.getAttribute("href"));CH.querySelector(".mbody").scrollTo({top:t.offsetTop-8,behavior:"smooth"})});
 
 /* ---------- background behaviour ---------- */
 S.bg=LS.get("bg","stop");S.autoResume=LS.get("autoResume",true);
