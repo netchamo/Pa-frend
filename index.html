@@ -87,13 +87,19 @@ label.btn{cursor:pointer;display:inline-flex}
 .dev-top{display:flex;justify-content:space-between;align-items:center;padding:0 12px;font-family:var(--mono);font-size:10px;letter-spacing:.16em;color:#7f8ba0;direction:ltr}
 .dev-pw{display:flex;align-items:center;gap:6px}
 .led{width:8px;height:8px;border-radius:50%;background:#3a2a1a;box-shadow:inset 0 0 2px #000}
-.device.on .led{background:#5bd38b;box-shadow:0 0 8px #5bd38b,0 0 2px #fff inset}
-.dev-display{border-radius:8px;padding:10px 12px;background:linear-gradient(180deg,#07110d,#0b1712);border:1px solid #1d3a2c;box-shadow:inset 0 2px 8px rgba(0,0,0,.7);font-family:var(--mono);color:#7be0a2;text-shadow:0 0 8px rgba(123,224,162,.45);display:flex;flex-direction:column;gap:6px}
+.device.on .led{background:var(--lc);box-shadow:0 0 8px var(--lc),0 0 2px #fff inset}
+.device{--lc:#ff8fc8;--lg:rgba(255,143,200,.45);--lb1:#160a11;--lb2:#1e0d17;--lbd:#4a2238}
+.device[data-mode=white]{--lc:#eef3fa;--lg:rgba(238,243,250,.4);--lb1:#0d0f13;--lb2:#14171d;--lbd:#3a4150}
+.device[data-mode=brown]{--lc:#d9a066;--lg:rgba(217,160,102,.45);--lb1:#130c06;--lb2:#1b1209;--lbd:#4a3220}
+.device[data-mode=track]{--lc:#6cd3ff;--lg:rgba(108,211,255,.45);--lb1:#06111a;--lb2:#0a1824;--lbd:#1f3d57}
+.dev-display{border-radius:8px;padding:10px 12px;background:linear-gradient(180deg,var(--lb1),var(--lb2));border:1px solid var(--lbd);box-shadow:inset 0 2px 8px rgba(0,0,0,.7);font-family:var(--mono);color:var(--lc);text-shadow:0 0 8px var(--lg);transition:color .3s,background .3s;display:flex;flex-direction:column;gap:6px}
 .dd-row{display:flex;justify-content:space-between;align-items:center;gap:10px}
 .dd-big{font-size:22px;letter-spacing:.12em;font-weight:600}
-.dd-slope{font-size:12px;opacity:.8}
+.dd-slope{font-size:12px;opacity:.85;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:60%}
+.dev-track{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:center}
+.dev-track .note{max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .dd-bars{display:flex;align-items:flex-end;gap:3px;height:22px;flex:1}
-.dd-bars i{flex:1;max-width:10px;height:var(--h,50%);background:#7be0a2;opacity:.35;border-radius:1px}
+.dd-bars i{flex:1;max-width:10px;height:var(--h,50%);background:var(--lc);opacity:.35;border-radius:1px}
 .device.on .dd-bars i{opacity:.9;animation:ngb .9s ease-in-out infinite alternate}
 .device.on .dd-bars i:nth-child(odd){animation-duration:.7s}
 .device.on .dd-bars i:nth-child(3n){animation-duration:1.15s}
@@ -103,12 +109,12 @@ label.btn{cursor:pointer;display:inline-flex}
 .dev-keys button{flex:1;display:flex;align-items:center;justify-content:center;gap:7px;padding:9px 4px;border-radius:8px;border:1px solid #3a475d;background:linear-gradient(180deg,#2c3647,#1d2532);color:#cfd8e6;font-size:13px;box-shadow:0 2px 0 #0b0f15,inset 0 1px 0 rgba(255,255,255,.08)}
 .dev-keys button[aria-pressed="true"]{background:linear-gradient(180deg,#1a212c,#222b39);box-shadow:inset 0 2px 4px rgba(0,0,0,.6);transform:translateY(1px);color:#fff}
 .kled{width:6px;height:6px;border-radius:50%;background:#3b2c18}
-.dev-keys button[aria-pressed="true"] .kled{background:#ffb454;box-shadow:0 0 6px #ffb454}
+.dev-keys button[aria-pressed="true"] .kled{background:var(--lc);box-shadow:0 0 6px var(--lc)}
 .dev-ctl{display:flex;align-items:center;gap:14px}
 .playbtn{flex:none;width:64px;height:64px;border-radius:50%;border:1px solid #4a5870;display:grid;place-items:center;color:#e7ecf3;background:radial-gradient(circle at 50% 35%,#3a4659,#1b222e 70%);box-shadow:0 4px 10px rgba(0,0,0,.5),inset 0 1px 0 rgba(255,255,255,.12),0 0 0 4px #121823,0 0 0 5px #2c3647}
 .playbtn svg{width:26px;height:26px}
 .playbtn .ic-stop{display:none}
-.device.on .playbtn{color:#0b0f15;background:radial-gradient(circle at 50% 35%,#8af0b4,#3fb873 75%);border-color:#7be0a2;box-shadow:0 0 18px rgba(91,211,139,.45),inset 0 1px 0 rgba(255,255,255,.4),0 0 0 4px #121823,0 0 0 5px #3fb873}
+.device.on .playbtn{color:#0b0f15;background:radial-gradient(circle at 50% 35%,#fff 0%,var(--lc) 70%);border-color:var(--lc);box-shadow:0 0 18px var(--lg),inset 0 1px 0 rgba(255,255,255,.4),0 0 0 4px #121823,0 0 0 5px var(--lc)}
 .device.on .playbtn .ic-play{display:none}.device.on .playbtn .ic-stop{display:block}
 .playbtn:active{transform:scale(.96)}
 .fader{flex:1;min-width:0;display:flex;flex-direction:column;gap:4px}
@@ -423,6 +429,38 @@ canvas{display:block}
 
   <section class="grid">
     <div class="card panel">
+      <h2 class="ttl"><span class="pillt">מחולל רעש ונגן רפרנס</span><small>להשמעה דרך המערכת</small></h2>
+      <div class="device" id="ngDev">
+        <div class="dev-top"><span class="dev-brand">RESONA · NG‑1</span><span class="dev-pw"><span class="led" id="ngLed"></span>OUTPUT</span></div>
+        <div class="dev-display" dir="ltr">
+          <div class="dd-row"><span class="dd-big" id="ngType">PINK</span><span class="dd-slope" id="ngSlope">0 dB/oct</span></div>
+          <div class="dd-row"><span class="dd-bars" id="ngBars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span><span id="ngTime"></span> <span id="pinkLvlV">-24 dBFS</span></span></div>
+        </div>
+        <div class="dev-keys" id="noiseSeg">
+          <button data-n="pink" aria-pressed="true"><span class="kled"></span>ורוד</button>
+          <button data-n="white" aria-pressed="false"><span class="kled"></span>לבן</button>
+          <button data-n="brown" aria-pressed="false"><span class="kled"></span>חום</button>
+          <button data-n="track" aria-pressed="false"><span class="kled"></span>שיר</button>
+        </div>
+        <div class="dev-track" id="ngTrackRow" hidden>
+          <label class="btn small" for="trackIn">בחר שיר מהמכשיר</label>
+          <span class="note" id="trackName">לא נבחר שיר</span>
+          <input type="file" id="trackIn" accept="audio/*" class="vh">
+        </div>
+        <div class="dev-ctl">
+          <button class="playbtn" id="pinkBtn" aria-label="נגן רעש"><svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><svg class="ic-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></svg></button>
+          <div class="fader">
+            <div class="fader-lbl"><span>LEVEL</span><span class="mono" dir="ltr" id="fdrRange">−40 … −6 dBFS</span></div>
+            <input type="range" id="pinkLvl" min="-40" max="-6" value="-24" aria-label="רמת רעש">
+            <div class="ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+          </div>
+        </div>
+      </div>
+      <p class="note" id="noiseNote" style="margin:10px 0 6px"></p>
+      <p class="note" style="margin:0">חבר את יציאת המכשיר לקונסולה, הרם בהדרגה עד שהרעש גבוה ב־10 dB לפחות מרעש הרקע. זהירות על השמיעה ועל הטוויטרים.</p>
+    </div>
+
+    <div class="card panel">
       <h2 class="ttl"><span class="pillt">מקור ומיקרופון</span><small id="profQ">—</small></h2>
       <div class="subbox">
         <span class="lbl">מקור אות</span>
@@ -529,32 +567,6 @@ canvas{display:block}
         <button class="btn small" id="posClear">נקה</button>
         <label class="tog"><input type="checkbox" id="posUse" checked>נתח לפי הממוצע</label>
       </div>
-    </div>
-
-    <div class="card panel">
-      <h2 class="ttl"><span class="pillt">מחולל רעש</span><small>להשמעה דרך המערכת</small></h2>
-      <div class="device" id="ngDev">
-        <div class="dev-top"><span class="dev-brand">RESONA · NG‑1</span><span class="dev-pw"><span class="led" id="ngLed"></span>OUTPUT</span></div>
-        <div class="dev-display" dir="ltr">
-          <div class="dd-row"><span class="dd-big" id="ngType">PINK</span><span class="dd-slope" id="ngSlope">0 dB/oct</span></div>
-          <div class="dd-row"><span class="dd-bars" id="ngBars"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></span><span id="pinkLvlV">-24 dBFS</span></div>
-        </div>
-        <div class="dev-keys" id="noiseSeg">
-          <button data-n="pink" aria-pressed="true"><span class="kled"></span>ורוד</button>
-          <button data-n="white" aria-pressed="false"><span class="kled"></span>לבן</button>
-          <button data-n="brown" aria-pressed="false"><span class="kled"></span>חום</button>
-        </div>
-        <div class="dev-ctl">
-          <button class="playbtn" id="pinkBtn" aria-label="נגן רעש"><svg class="ic-play" viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l11-6.5z" fill="currentColor"/></svg><svg class="ic-stop" viewBox="0 0 24 24" aria-hidden="true"><rect x="6.5" y="6.5" width="11" height="11" rx="1.5" fill="currentColor"/></svg></button>
-          <div class="fader">
-            <div class="fader-lbl"><span>LEVEL</span><span class="mono" dir="ltr">−40 … −6</span></div>
-            <input type="range" id="pinkLvl" min="-40" max="-6" value="-24" aria-label="רמת רעש">
-            <div class="ticks" aria-hidden="true"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
-          </div>
-        </div>
-      </div>
-      <p class="note" id="noiseNote" style="margin:10px 0 6px"></p>
-      <p class="note" style="margin:0">חבר את יציאת המכשיר לקונסולה, הרם בהדרגה עד שהרעש גבוה ב־10 dB לפחות מרעש הרקע. זהירות על השמיעה ועל הטוויטרים.</p>
     </div>
 
     <div class="card panel">
@@ -855,13 +867,18 @@ function autoProfile(label){
  else if(/iphone/.test(l))id="iphone";else if(/ipad/.test(l))id="ipad";
  if(id&&id!==S.profile&&!(id==="umik"&&S.profile==="custom")){S.profile=id;$("#profSel").value=id;onProfile();toast("זוהה: "+profById(id).name)}
 }
+const ngGain=lvl=>S.noise==="track"?Math.pow(10,(lvl+6)/20):Math.pow(10,(lvl+20)/20);
 function togglePink(){
  ensureCtx();
  if(S.pink){stopNoise();return}
- const src=S.ctx.createBufferSource();src.buffer=makeNoise(S.noise);src.loop=true;const g=S.ctx.createGain();
- g.gain.value=Math.pow(10,(+$("#pinkLvl").value+20)/20);src.connect(g);g.connect(S.ctx.destination);src.start();
- S.pink={src,g};ngUI();
+ if(S.noise==="track"&&!S.trackBuf){$("#trackIn").click();return}
+ const src=S.ctx.createBufferSource();src.buffer=S.noise==="track"?S.trackBuf:makeNoise(S.noise);src.loop=true;const g=S.ctx.createGain();
+ g.gain.value=ngGain(+$("#pinkLvl").value);src.connect(g);g.connect(S.ctx.destination);src.start();
+ S.pink={src,g,t0:S.ctx.currentTime};ngUI();ngTick();
 }
+function ngTick(){if(!S.pink){$("#ngTime").textContent="";return}
+ if(S.noise==="track"&&S.trackBuf){const d=S.trackBuf.duration,t=(S.ctx.currentTime-S.pink.t0)%d,f=x=>Math.floor(x/60)+":"+String(Math.floor(x%60)).padStart(2,"0");$("#ngTime").textContent=f(t)+" / "+f(d)+" ·"}else $("#ngTime").textContent="";
+ setTimeout(ngTick,500)}
 
 /* ---------- per-frame analysis ---------- */
 let lastT=performance.now(),lastAna=0;
@@ -1489,13 +1506,20 @@ $("#buildLock").onclick=e=>{S.bLock=!S.bLock;e.target.setAttribute("aria-pressed
 S.loadsDetail=LS.get("loadsDetail",false);segSel("#loadSeg","l",S.loadsDetail?"detail":"basic");
 $$("#loadSeg button").forEach(b=>b.onclick=()=>{S.loadsDetail=b.dataset.l==="detail";LS.set("loadsDetail",S.loadsDetail);segSel("#loadSeg","l",b.dataset.l);analyze()});
 function stopNoise(){if(!S.pink)return;try{S.pink.src.stop()}catch(e){}S.pink=null;ngUI()}
-const NG_HW={pink:["PINK","0 dB/oct"],white:["WHITE","+3 dB/oct"],brown:["BROWN","−3 dB/oct"]};
+const NG_HW={pink:["PINK","0 dB/oct"],white:["WHITE","+3 dB/oct"],brown:["BROWN","−3 dB/oct"],track:["TRACK","—"]};
+NOISE_INFO.track=["שיר רפרנס","מנגן שיר מוכר מהמכשיר דרך המערכת, כדי לשמוע ולראות איך החדר מגיב למוזיקה אמיתית. לכיוון מדויק עדיף רעש ורוד; השיר טוב לבדיקה ולהשוואה באוזן."];
 function ngUI(){const on=!!S.pink,d=$("#ngDev");d.classList.toggle("on",on);$("#pinkBtn").setAttribute("aria-label",(on?"עצור ":"נגן ")+NOISE_INFO[S.noise][0]);$("#pinkBtn").setAttribute("aria-pressed",on);
- $("#ngType").textContent=NG_HW[S.noise][0];$("#ngSlope").textContent=NG_HW[S.noise][1];
- const bars=[...document.querySelectorAll("#ngBars i")],sl={pink:0,white:3,brown:-3}[S.noise];bars.forEach((b,i)=>b.style.setProperty("--h",clamp(55+sl*(i-5.5)*1.6,12,100)+"%"))}
+ d.dataset.mode=S.noise;$("#fdrRange").textContent=S.noise==="track"?"−34 … 0 dB":"−40 … −6 dBFS";$("#ngTrackRow").hidden=S.noise!=="track";
+ $("#ngType").textContent=NG_HW[S.noise][0];$("#ngSlope").textContent=S.noise==="track"?(S.trackName||"בחר שיר"):NG_HW[S.noise][1];
+ const lv=+$("#pinkLvl").value;$("#pinkLvlV").textContent=S.noise==="track"?((lv+6>=0?"+":"")+(lv+6)+" dB"):lv+" dBFS";
+ const bars=[...document.querySelectorAll("#ngBars i")],sl={pink:0,white:3,brown:-3,track:0}[S.noise];bars.forEach((b,i)=>b.style.setProperty("--h",clamp(55+sl*(i-5.5)*1.6,12,100)+"%"))}
 function setNoise(n){S.noise=n;segSel("#noiseSeg","n",n);$("#noiseNote").textContent=NOISE_INFO[n][1];if(S.pink){stopNoise();togglePink()}else ngUI()}
 $$("#noiseSeg button").forEach(b=>b.onclick=()=>setNoise(b.dataset.n));setNoise("pink");ngUI();
-$("#pinkLvl").oninput=e=>{$("#pinkLvlV").textContent=e.target.value+" dBFS";if(S.pink)S.pink.g.gain.value=Math.pow(10,(+e.target.value+20)/20)};
+$("#pinkLvl").oninput=e=>{ngUI();if(S.pink)S.pink.g.gain.value=ngGain(+e.target.value)};
+$("#trackIn").onchange=async e=>{const f=e.target.files[0];if(!f)return;ensureCtx();$("#trackName").textContent="טוען…";
+ try{const buf=await S.ctx.decodeAudioData(await f.arrayBuffer());S.trackBuf=buf;S.trackName=f.name.replace(/\.[^.]+$/,"");$("#trackName").textContent=f.name;
+  if(S.noise!=="track")setNoise("track");if(S.pink)stopNoise();togglePink()}
+ catch(err){$("#trackName").textContent="לא נבחר שיר";showBanner("לא הצלחתי לפתוח את הקובץ. נסה MP3, M4A, WAV או AAC. שירים מ־Apple Music או Spotify מוגנים ולא ניתנים לפתיחה — צריך קובץ שנמצא בתיקיית הקבצים של המכשיר.")}};
 
 function showBanner(h){const b=$("#banner");b.innerHTML=h;b.hidden=false}
 function hideBanner(){$("#banner").hidden=true}
