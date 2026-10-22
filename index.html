@@ -31,7 +31,6 @@
 }
 *{box-sizing:border-box}
 label.btn{cursor:pointer;display:inline-flex}
-.helpbtn{display:inline-flex;align-items:center;gap:8px;align-self:flex-start}
 .qm{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:50%;background:var(--spec2);color:#fff;font-weight:700;font-size:12px}
 .qlink{background:none;border:0;color:var(--spec);text-decoration:underline;font-size:11px;padding:0 4px;cursor:pointer}
 .modal{border:1px solid var(--line2);border-radius:16px;background:var(--panel);color:var(--fg);padding:0;width:min(640px,calc(100vw - 24px));max-height:min(86vh,820px);box-shadow:0 20px 60px rgba(0,0,0,.6)}
@@ -63,14 +62,14 @@ label.btn{cursor:pointer;display:inline-flex}
 .stagebar .tabs{align-self:center;max-width:100%}
 .sb-row{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
 .sb-row .sel{flex:1 1 0;min-width:0;max-width:200px;padding:7px 8px;font-size:13px}
-.sb-toggles{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:6px;max-width:760px;width:100%;align-self:center}
-.sb-toggles .tog{justify-content:center;padding:7px 6px;border:1px solid var(--line);border-radius:8px;background:var(--bg);font-size:13px;cursor:pointer;color:var(--muted)}
-.sb-toggles .tog:has(input:checked){border-color:var(--spec2);color:var(--fg);background:#132235}
+.sb-toggles{display:flex;flex-wrap:wrap;justify-content:center;gap:2px 10px}
+.sb-toggles .tog{cursor:pointer}
+.sb-toggles .tog:has(input:checked){color:var(--fg)}
 .sb-actions{display:flex;gap:8px;justify-content:center;max-width:760px;width:100%;align-self:center}
 .sb-actions .btn{flex:1;padding:10px 8px}
 .btn.bigfs{flex:2;display:inline-flex;align-items:center;justify-content:center;gap:10px;font-size:16px;padding:12px 16px;border-radius:12px;box-shadow:0 0 0 1px #3a9aec,0 6px 20px rgba(45,141,224,.35)}
 .btn.bigfs svg{width:22px;height:22px}
-@media (max-width:640px){.sb-toggles{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
 .spl{justify-content:center}
 .meter .card .stats{text-align:center}
 /* collapsible bar */
@@ -222,7 +221,16 @@ canvas{display:block}
 .score{display:flex;align-items:center;gap:10px;margin:4px 0 2px}
 .score .bar{flex:1;height:6px;background:var(--bg);border-radius:3px;overflow:hidden}
 .score .bar i{display:block;height:100%;background:linear-gradient(90deg,var(--bad),var(--warn),var(--good));transition:width .3s}
-.calbox{border:1px dashed var(--line2);border-radius:8px;padding:10px;margin-top:10px;display:flex;flex-direction:column;gap:8px}
+[hidden]{display:none!important}
+.subbox{border:1px solid var(--line);border-radius:10px;padding:10px 12px;margin-bottom:8px;background:rgba(255,255,255,.015);display:flex;flex-direction:column;gap:6px}
+.subbox > .lbl{font-weight:600;color:#aeb9cb}
+.subbox select{background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:7px 8px;font-size:13px;width:100%}
+.calbox{align-items:center;text-align:center;gap:8px}
+.calbox .row{justify-content:center}
+.calbox .seg{width:100%}
+.cbt{font-size:13px}
+.helpbtn{display:inline-flex;align-items:center;gap:8px;align-self:center;background:#182638;border-color:#2c4766;color:#d6e6f7}
+.helpbtn:hover{border-color:#3a6a99}
 .row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
 .row > input[type=number]{width:90px;background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-family:var(--mono)}
 
@@ -416,17 +424,26 @@ canvas{display:block}
   <section class="grid">
     <div class="card panel">
       <h2 class="ttl"><span class="pillt">מקור ומיקרופון</span><small id="profQ">—</small></h2>
-      <div class="field"><span class="lbl">מקור אות</span>
+      <div class="subbox">
+        <span class="lbl">מקור אות</span>
         <div class="seg" id="srcSeg">
           <button data-s="mic" aria-pressed="true">מיקרופון</button>
           <button data-s="file" aria-pressed="false">קובץ</button>
           <button data-s="demo" aria-pressed="false">הדגמה</button>
         </div>
       </div>
-      <div class="field" id="devField"><span class="lbl">התקן קלט</span>
+      <div class="subbox" id="devField"><span class="lbl">התקן קלט</span>
         <select id="devSel"><option value="">ברירת מחדל של המערכת</option></select>
       </div>
-      <div class="field"><span class="lbl">כשיוצאים מהאפליקציה</span>
+      <div class="subbox" id="fileField" hidden><span class="lbl">קובץ אודיו (הקלטה מהאולם, רעש ורוד, מוזיקה)</span>
+        <span class="row"><label class="btn small" for="fileIn">בחר קובץ אודיו</label><span class="note" id="fileName">לא נבחר קובץ</span></span><input type="file" id="fileIn" accept="audio/*" class="vh">
+        <label class="tog"><input type="checkbox" id="monitor">השמע ברמקולים בזמן הניתוח</label>
+      </div>
+      <div class="subbox"><span class="lbl">פרופיל מיקרופון</span>
+        <select id="profSel"></select>
+        <span class="note" id="profNote"></span>
+      </div>
+      <div class="subbox"><span class="lbl">כשיוצאים מהאפליקציה</span>
         <div class="seg" id="bgSeg">
           <button data-b="stop" aria-pressed="true">כבה מיקרופון</button>
           <button data-b="keep" aria-pressed="false">השאר דולק ברקע</button>
@@ -434,27 +451,21 @@ canvas{display:block}
         <label class="tog" id="resumeRow"><input type="checkbox" id="autoResume" checked>חזור למדידה אוטומטית כשחוזרים</label>
         <span class="note" id="bgNote"></span>
       </div>
-      <div class="field" id="fileField" hidden><span class="lbl">קובץ אודיו (הקלטה מהאולם, רעש ורוד, מוזיקה)</span>
-        <span class="row"><label class="btn small" for="fileIn">בחר קובץ אודיו</label><span class="note" id="fileName">לא נבחר קובץ</span></span><input type="file" id="fileIn" accept="audio/*" class="vh">
-        <label class="tog"><input type="checkbox" id="monitor">השמע ברמקולים בזמן הניתוח</label>
-      </div>
-      <div class="field"><span class="lbl">פרופיל מיקרופון</span>
-        <select id="profSel"></select>
-        <span class="note" id="profNote"></span>
-      </div>
-      <div class="field"><span class="lbl">קובץ כיול (UMIK / Dayton / Sonarworks · תדר + dB) <button class="qlink" type="button" data-help="files">מה זה?</button></span>
+      <div class="subbox"><span class="lbl">קובץ כיול (UMIK / Dayton / Sonarworks · תדר + dB) <button class="qlink" type="button" data-help="files">מה זה?</button></span>
         <span class="row"><label class="btn small" for="calFile">בחר קובץ כיול</label><span class="note" id="calName">לא נבחר קובץ</span></span><input type="file" id="calFile" accept=".txt,.cal,.frd,.csv,text/plain" class="vh">
         <span class="note mono" id="calInfo"></span>
       </div>
-      <div class="calbox">
-        <div class="row" style="justify-content:space-between"><b style="font-size:13px">כיול רמה</b><span class="note mono" id="offInfo">היסט —</span></div>
+      <div class="subbox calbox">
+        <b class="cbt">כיול רמה</b>
+        <span class="note mono" id="offInfo">היסט —</span>
         <button class="btn small helpbtn" id="calHelpBtn" type="button"><span class="qm">?</span>איך מכיילים — מדריך מלא</button>
         <div class="seg" id="calSeg">
           <button data-c="calib" aria-pressed="true">קלברטור</button>
           <button data-c="ref" aria-pressed="false">מד SPL ייחוס</button>
         </div>
         <div class="row"><span class="note" id="calLbl">רמת הקלברטור</span><input type="number" id="calRef" value="94" step="0.1"><span class="note mono">dB</span></div>
-        <div class="row"><button class="btn small warm" id="calGo">כייל עכשיו (3 שנ׳)</button><button class="btn small" id="calReset">אפס לברירת מחדל</button><span class="note" id="calStatus"></span></div>
+        <div class="row"><button class="btn small warm" id="calGo">כייל עכשיו (3 שנ׳)</button><button class="btn small" id="calReset">אפס לברירת מחדל</button></div>
+        <span class="note" id="calStatus"></span>
       </div>
       <div style="margin-top:12px">
         <div class="row" style="justify-content:space-between"><b style="font-size:13px">אמינות המדידה</b><span class="mono" id="relV">—</span></div>

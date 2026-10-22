@@ -1,5 +1,5 @@
 // Offline cache: the app keeps working in a venue without internet.
-const CACHE = "resona-v10";
+const CACHE = "resona-v11";
 const ASSETS = ["./", "./index.html", "./manifest.webmanifest", "./icons/icon.svg", "./icons/icon-192.png", "./icons/icon-512.png", "./icons/icon-180.png"];
 
 self.addEventListener("install", e => {
