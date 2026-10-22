@@ -311,6 +311,7 @@ canvas{display:block}
           <button data-iv="bars" aria-pressed="false">1/3</button>
           <button id="hEar" aria-pressed="true" title="משקלל את התצוגה לפי רגישות האוזן ברמה הנוכחית">כמו האוזן</button>
           <button id="hTrail" aria-pressed="true">עקבות</button>
+          <button id="hPk" aria-pressed="false">קו שיא</button>
           <button id="hTgt" aria-pressed="false">יעד</button>
           <button id="hRot" aria-pressed="true">לרוחב</button>
         </div>
@@ -1131,7 +1132,7 @@ function drawHist(){
 }
 
 /* ---------- immersive listening view ---------- */
-const IM={landscape:true,ear:true,trail:true,tgt:false,trails:[],tick:0,arr:new Float64Array(NP),sm:new Float64Array(NP),idleT:0,wake:null,top:100};
+const IM={pk:LS.get("immPeak",false),landscape:true,ear:true,trail:true,tgt:false,trails:[],tick:0,arr:new Float64Array(NP),sm:new Float64Array(NP),idleT:0,wake:null,top:100};
 const PAD_N={l:42,r:40,t:14,b:24};
 const HUES=[[20,[255,70,85]],[60,[255,120,60]],[150,[255,190,70]],[400,[150,230,120]],[1200,[70,215,200]],[3500,[80,160,255]],[9000,[150,110,255]],[20000,[225,120,255]]];
 function hueAt(f){if(f<=HUES[0][0])return HUES[0][1];for(let i=1;i<HUES.length;i++)if(f<=HUES[i][0]){const a=HUES[i-1],b=HUES[i],t=Math.log(f/a[0])/Math.log(b[0]/a[0]);return a[1].map((v,k)=>Math.round(v+(b[1][k]-v)*t))}return HUES[HUES.length-1][1]}
@@ -1153,13 +1154,13 @@ function drawImmersive(dt){
  cx.font="10.5px "+getComputedStyle(document.documentElement).getPropertyValue("--mono");cx.textAlign="center";cx.textBaseline="top";
  for(const f of LAB_F){const x=Math.round(xOf(f))+.5;cx.strokeStyle="rgba(140,160,190,.07)";cx.beginPath();cx.moveTo(x,PAD.t);cx.lineTo(x,base);cx.stroke();cx.fillStyle="rgba(140,160,190,.45)";cx.fillText(fmtF(f),clamp(x,PAD.l+10,W-PAD.r-10),base+8)}
  // trails
- if(S.running&&!S.frozen&&++IM.tick%6===0){IM.trails.push(Float64Array.from(IM.sm));if(IM.trails.length>36)IM.trails.shift()}
+ if(S.running&&!S.frozen&&++IM.tick%3===0){IM.trails.push(Float64Array.from(IM.sm));if(IM.trails.length>14)IM.trails.shift()}
  if(!IM.peak||IM.peak.length!==NP)IM.peak=Float64Array.from(IM.sm);
- if(!S.frozen)for(let i=0;i<NP;i++)IM.peak[i]=Math.max(IM.sm[i],IM.peak[i]-dt*1.5);
- if(IM.trail)IM.trails.forEach((a,j)=>{cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(a[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}cx.strokeStyle=hGrad(.02+.16*Math.pow(j/IM.trails.length,1.6));cx.lineWidth=1;cx.stroke()});
+ if(!S.frozen)for(let i=0;i<NP;i++)IM.peak[i]=Math.max(IM.sm[i],IM.peak[i]-dt*4);
+ if(IM.trail)IM.trails.forEach((a,j)=>{cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(a[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}cx.strokeStyle=hGrad(.03+.10*j/IM.trails.length);cx.lineWidth=1;cx.stroke()});
  // body
- if(IM.trail){cx.beginPath();for(let i=0;i<NP;i+=2){const xx=xOf(fpts[i]),yy=Math.min(base,y(IM.peak[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}
-  cx.save();cx.shadowColor="rgba(255,255,255,.25)";cx.shadowBlur=6;cx.strokeStyle=hGrad(.55);cx.lineWidth=1.2;cx.setLineDash([2,3]);cx.stroke();cx.restore()}
+ if(IM.pk){cx.beginPath();for(let i=0;i<NP;i++){const xx=xOf(fpts[i]),yy=Math.min(base,y(IM.peak[i]));i?cx.lineTo(xx,yy):cx.moveTo(xx,yy)}
+  cx.strokeStyle="rgba(231,236,243,.5)";cx.lineWidth=1.2;cx.stroke()}
  const body=()=>{cx.beginPath();cx.moveTo(PAD.l,base);for(let i=0;i<NP;i++)cx.lineTo(xOf(fpts[i]),Math.min(base,y(IM.sm[i])));cx.lineTo(W-PAD.r,base);cx.closePath()};
  body();cx.fillStyle=hGrad(.30);cx.fill();
  const vf=cx.createLinearGradient(0,PAD.t,0,base);vf.addColorStop(0,"rgba(5,7,11,0)");vf.addColorStop(1,"rgba(5,7,11,.55)");cx.fillStyle=vf;cx.fill();
@@ -1210,12 +1211,13 @@ function exitImm(){
  try{screen.orientation&&screen.orientation.unlock&&screen.orientation.unlock()}catch(e){}
  try{IM.wake&&IM.wake.release()}catch(e){}IM.wake=null;layoutImm();requestAnimationFrame(resize);
 }
-function syncImmBtns(){$$(".hud-ctl [data-iv]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.iv===S.view));$("#hEar").setAttribute("aria-pressed",IM.ear);$("#hTrail").setAttribute("aria-pressed",IM.trail);$("#hTgt").setAttribute("aria-pressed",IM.tgt);$("#hRot").setAttribute("aria-pressed",IM.landscape)}
+function syncImmBtns(){$$(".hud-ctl [data-iv]").forEach(b=>b.setAttribute("aria-pressed",b.dataset.iv===S.view));$("#hEar").setAttribute("aria-pressed",IM.ear);$("#hTrail").setAttribute("aria-pressed",IM.trail);$("#hTgt").setAttribute("aria-pressed",IM.tgt);$("#hPk").setAttribute("aria-pressed",IM.pk);$("#hRot").setAttribute("aria-pressed",IM.landscape)}
 function poke(){$(".stage").classList.remove("idle");clearTimeout(IM.idleT);IM.idleT=setTimeout(()=>{if(S.imm)$(".stage").classList.add("idle")},3000)}
 $("#immBtn").onclick=enterImm;$("#hExit").onclick=exitImm;
 $$(".hud-ctl [data-iv]").forEach(b=>b.onclick=()=>{setView(b.dataset.iv);syncImmBtns()});
 $("#hEar").onclick=()=>{IM.ear=!IM.ear;IM.trails=[];IM.peak=null;syncImmBtns()};
 $("#hTrail").onclick=()=>{IM.trail=!IM.trail;syncImmBtns()};
+$("#hPk").onclick=()=>{IM.pk=!IM.pk;LS.set("immPeak",IM.pk);syncImmBtns()};
 $("#hTgt").onclick=()=>{IM.tgt=!IM.tgt;syncImmBtns()};
 $("#hRot").onclick=()=>{IM.landscape=!IM.landscape;try{IM.landscape?screen.orientation.lock("landscape").catch(()=>{}):screen.orientation.unlock()}catch(e){}syncImmBtns();layoutImm()};
 ["pointermove","pointerdown"].forEach(ev=>$(".stage").addEventListener(ev,()=>{if(S.imm)poke()}));
